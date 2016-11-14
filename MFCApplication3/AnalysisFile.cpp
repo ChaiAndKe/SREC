@@ -95,13 +95,32 @@ int CAnalysisFile::ReadNextLine()
 		break;
 	}
 
-	lineType = GetLineType();
-	lineLength = GetLineLength();
-	addrLength = GetAddrLength();
+	lineType = GenerateLineType();
+	lineLength = GenerateLineLength();
+	addrLength = GenerateAddrLength();
 	dataLength = lineLength-addrLength-1;
-	lineStartAddr = GetLineStartAddress();
+	lineStartAddr = GenerateLineStartAddress();
 	lineStopAddr = lineStartAddr+dataLength-1;
 	
+	if (lineType=='7' || lineType=='8' || lineType=='9')
+	{
+		mainStartAddr = GenerateLineStartAddress();
+		switch(lineData[1])
+		{
+		case '7':
+			mainStartAddr = lineData[3]<<24|lineData[4]<<16|lineData[5]<<8|lineData[6];
+			break;
+		case '8':
+			mainStartAddr = lineData[3]<<16|lineData[4]<<8|lineData[5];
+			break;
+		case '9':
+			mainStartAddr = lineData[3]<<8|lineData[4];
+			break;
+		}
+
+		return ReadNextLine();
+	}
+
 	if (!sendAllData)
 	{
 		//判断数据是否在范围内
@@ -185,23 +204,7 @@ int CAnalysisFile::ReadAndTurn()
 	{
 		lineData[i] = lineData[2*i-2]<<4|lineData[2*i-1];
 	}
-	if (lineData[1]=='7' || lineData[1]=='8' || lineData[1]=='9')
-	{
-		switch(lineData[1])
-		{
-		case '7':
-			mainStartAddr = lineData[3]<<24|lineData[4]<<16|lineData[5]<<8|lineData[6];
-			break;
-		case '8':
-			mainStartAddr = lineData[3]<<16|lineData[4]<<8|lineData[5];
-			break;
-		case '9':
-			mainStartAddr = lineData[3]<<8|lineData[4];
-			break;
-		}
-		
-		return ReadAndTurn();
-	}
+	
 	lineTotalLength = 2+(lineTotalLength-2)/2;
 	return FILE_READ_NORMAL;
 }
@@ -213,17 +216,17 @@ BOOL CAnalysisFile::IsEnd()
 		return FALSE;
 }
 
-UCHAR CAnalysisFile::GetLineType()
+UCHAR CAnalysisFile::GenerateLineType()
 {
 	return lineData[1];
 }
 
-UCHAR CAnalysisFile::GetLineLength()
+UCHAR CAnalysisFile::GenerateLineLength()
 {
 	return lineData[2];
 }
 
-UCHAR CAnalysisFile::GetAddrLength()
+UCHAR CAnalysisFile::GenerateAddrLength()
 {
 	UCHAR len = 0;
 	switch(lineType)
@@ -242,18 +245,23 @@ UCHAR CAnalysisFile::GetAddrLength()
 }
 
 
-UINT CAnalysisFile::GetLineStartAddress()
+UINT CAnalysisFile::GenerateLineStartAddress()
 {
 	UINT add = 0;
 	switch(lineType)
 	{
 	case '1'://2个字节的地址
+	case '9':
 		add = lineData[3]<<8|lineData[4];
 		break;
+
 	case '2'://3个字节的地址
+	case '8':
 		add = lineData[3]<<16|lineData[4]<<8|lineData[5];
 		break;
+
 	case '3'://4个字节的地址
+	case '7':
 		add = lineData[3]<<24|lineData[4]<<16|lineData[5]<<8|lineData[6];
 		break;
 	}
@@ -338,17 +346,6 @@ UCHAR CAnalysisFile::GetSendedPercent()
 
 int CAnalysisFile::CheckSrecFile()
 {
-
-	if (!IsSetArrange)
-	{
-		throw "ERROR: Function SetArrage must be called successly before Read";
-	}
-	if (!sendAllData && (dataToSendStartAddr%8!=0))
-	{
-		//要求发送数据的首地址必须能被0x08整除
-		return FILE_STARTADDR_ERROR;
-	}
-
 	int flag = 0;
 	do 
 	{
@@ -368,14 +365,19 @@ int CAnalysisFile::CheckSrecFile()
 			break;
 		}
 
-		lineType = GetLineType();
-		lineLength = GetLineLength();
-		addrLength = GetAddrLength();
+		lineType = GenerateLineType();
+		lineLength = GenerateLineLength();
+		addrLength = GenerateAddrLength();
 		dataLength = lineLength-addrLength-1;
-		lineStartAddr = GetLineStartAddress();
+		lineStartAddr = GenerateLineStartAddress();
 		lineStopAddr = lineStartAddr+dataLength-1;
 
-	} while (flag = FILE_READ_NORMAL);
+		if (lineStartAddr%8!=0)
+		{
+			return FILE_ADDRESS_ERROR;
+		}
 
-	return TRUE;
+	} while (flag == FILE_READ_NORMAL);
+
+	return -1;//文件结束，正常情况下执行不到这里，因为到结束符后会在上方return;
 }

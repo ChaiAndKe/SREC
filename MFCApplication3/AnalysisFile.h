@@ -57,10 +57,10 @@ private:
 private:
 	BOOL IsEnd();//文件是否结束
 	int ReadAndTurn();//读取并转换成16进制
-	UCHAR GetLineType();//获取行数据类型
-	UCHAR GetLineLength();//获取行长度
-	UCHAR GetAddrLength();//获取地址位长度
-	UINT GetLineStartAddress();//获取行数据起始地址
+	UCHAR GenerateLineType();//获取行数据类型
+	UCHAR GenerateLineLength();//获取行长度
+	UCHAR GenerateAddrLength();//获取地址位长度
+	UINT GenerateLineStartAddress();//获取行数据起始地址
 	int IsDataInside();//数据是否在范围内
 	void GenerateSendData();//生成要发送的数据
 

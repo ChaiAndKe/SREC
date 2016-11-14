@@ -12,13 +12,14 @@ const int FILE_READ_NORMAL = 0;
 const int FILE_READ_ERROR = 1;
 const int FILE_READ_END = 2;
 
-const int FILE_JUDGE_OUT = 0;//范围外，重读
-const int FILE_JUDGE_ALLIN = 1;//全在范围内
-const int FILE_JUDGE_LEFTOUT = 2;//左边超出左边界
-const int FILE_JUDGE_RIGHTOUT = 3;//右边超出右边界
-const int FILE_JUDGE_BOTHOUT = 4;//两边超出，需要的数据量太小...一种理论情况?
+const int FILE_JUDGE_OUT = 3;//范围外，重读
+const int FILE_JUDGE_ALLIN = 4;//全在范围内
+const int FILE_JUDGE_LEFTOUT = 5;//左边超出左边界
+const int FILE_JUDGE_RIGHTOUT = 6;//右边超出右边界
+const int FILE_JUDGE_BOTHOUT = 7;//两边超出，需要的数据量太小...一种理论情况?
 
-const int FILE_STARTADDR_ERROR = 10;//设置的数据起始位置错误
+const int FILE_STARTADDR_ERROR = 8;//设置的数据起始位置错误
+const int FILE_ADDRESS_ERROR = 9;//行起始地址错误
 
 //通讯命令定义
 const UCHAR PASSWORD_OK = 0X01;

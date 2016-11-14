@@ -335,6 +335,12 @@ void CMFCApplication3Dlg::OnBnClickedButtonFilebrowse()
 
 	fileToWrite = new CAnalysisFile(filePathName);
 
+	fileToWrite->CheckSrecFile();
+
+#endif
+	
+#if 0
+
 	if (!fileToWrite->SetArrange(TRUE,0x00fa0000,0x00fa0001))
 	{
 		return;
