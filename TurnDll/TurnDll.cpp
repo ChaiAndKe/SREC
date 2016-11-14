@@ -21,3 +21,8 @@ TURNDLL_API char strTobin( char a )
 	}
 	return a;
 }
+
+TURNDLL_API UINT GetKey(UINT a)
+{
+	return a;
+}

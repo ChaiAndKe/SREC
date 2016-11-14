@@ -236,9 +236,12 @@ void CMFCApplication3Dlg::OnBnClickedButtonTest()
 	// DEBUG模式下有效，否则隐藏
 
 #if 1
-	CString str1,str2;
-	str1=_T("我们都是好孩子");
-	str2 = str1+_T("aaaaaaaaaaa");
+	UCHAR a,b,c;
+	a = 0;
+	b=0;
+	c=a+b;
+	a=0;
+	b=0;
 #endif
 }
 
@@ -331,15 +334,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonFilebrowse()
 		return;
 	}
 
-#if 1
+#if 0
 
 	fileToWrite = new CAnalysisFile(filePathName);
 
 	fileToWrite->CheckSrecFile();
+	fileToWrite->SeekToBegin();
 
-#endif
-	
-#if 0
 
 	if (!fileToWrite->SetArrange(TRUE,0x00fa0000,0x00fa0001))
 	{
@@ -449,6 +450,14 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		{
 			AfxMessageBox(_T("文件打开失败，请重试！"));
 			ShowInfo(_T("文件打开失败，请重试！"),0);
+			return;
+		}else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+		{
+			AfxMessageBox(_T("文件格式错误，请检查！"));
+			ShowInfo(_T("文件格式错误，请检查！"),0);
+			fileToWrite->Close();
+			delete fileToWrite;
+			fileToWrite = NULL;
 			return;
 		}
 		ShowInfo(_T("文件打开成功！"),0);
@@ -612,13 +621,17 @@ void CMFCApplication3Dlg::ShowErrMessageBox(CString err)
 
 BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d,UINT addr/*=0*/ )
 {
+	int random;
 	switch(order)
 	{
 	case ORDER_BOOT:
 		sendData1->SetData(ORDER_BOOT,len,passWord);
 		break;
 	case ORDER_KEY:
-		sendData1->SetData(ORDER_KEY,len,0);
+		srand(time(NULL)); 
+		random = rand();
+		receiceData->random =random;
+		sendData1->SetData(ORDER_KEY,len,random);
 		break;
 	case ORDER_ERASE:
 		sendData2->SetData(ORDER_ERASE,len,0,NULL);

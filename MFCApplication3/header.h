@@ -1,7 +1,7 @@
 #ifndef HEADER_H
 #define HEADER_H
 
-#if 0
+#if 1
 #define _TEST
 #endif
 
@@ -128,6 +128,9 @@ const int CAN_DISCONNECT_NOTOK = 1;
 
 #endif
 
+EXTERN_C UINT GetKey(UINT a);
+#pragma comment(lib,"TurnDll.lib")
+
 class BaseType{
 public:
 	UCHAR startSign;
@@ -137,6 +140,7 @@ public:
 	UCHAR totalLength;
 	UCHAR m_check;
 	UCHAR* allData;
+	UINT random;
 
 private:
 	BaseType();
@@ -153,7 +157,7 @@ public:
 	UCHAR GetCheck()
 	{
 		UCHAR l_check = 0;
-		for (UCHAR i=1;i<totalLength-1;i++)
+		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
 		{
 			l_check += allData[i];
 		}
@@ -184,6 +188,7 @@ public:
 		{
 			return -1;//³¤¶È´íÎó
 		}
+		random = data;
 
 		this->command = command;
 		this->dataLength = length;
@@ -193,10 +198,10 @@ public:
 		allData[0] = '$';
 		allData[1] = command;
 		allData[2] = length;
-		allData[3] = data>>24;
-		allData[4] = data>>16;
-		allData[5] = data>>8;
-		allData[6] = data;
+		allData[3] = data;
+		allData[4] = data>>8;
+		allData[5] = data>>16;
+		allData[6] = data>>24;
 
 		allData[7] = GetCheck();
 		
@@ -211,13 +216,11 @@ public:
 		}
 
 		this->command = command;
-		this->dataLength = length;
-
-		memset(allData,0,totalLength*sizeof(UCHAR));
+		
+		memset(allData,0XFF,totalLength*sizeof(UCHAR));
 
 		allData[0] = '$';
 		allData[1] = command;
-		allData[2] = length;
 		allData[3] = addr>>24;
 		allData[4] = addr>>16;
 		allData[5] = addr>>8;
@@ -227,6 +230,18 @@ public:
 		{
 			allData[7+i] = data[i];
 		}
+		
+		if (length<=4)
+			length = 4;
+		else if (length<=8)
+			length = 8;
+		else if(length<=12)
+			length = 12;
+		else if(length<=16)
+			length = 16;
+		allData[2] = length;
+		this->dataLength = length;
+
 		allData[totalLength-1] = GetCheck();
 		return TRUE;
 	}

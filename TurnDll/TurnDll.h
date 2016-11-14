@@ -11,3 +11,4 @@
 #endif
 
 EXTERN_C TURNDLL_API char strTobin(char a);
+EXTERN_C TURNDLL_API UINT GetKey(UINT a);
