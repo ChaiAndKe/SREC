@@ -128,7 +128,7 @@ const int CAN_DISCONNECT_NOTOK = 1;
 
 #endif
 
-EXTERN_C UINT GetKey(UINT a);
+EXTERN_C UINT CalculateKey(UINT a);
 #pragma comment(lib,"TurnDll.lib")
 
 class BaseType{
@@ -154,7 +154,7 @@ public:
 		memset(allData,0x00,totalLength*sizeof(UCHAR));
 	}
 public:
-	UCHAR GetCheck()
+	UCHAR CalculateCheck()
 	{
 		UCHAR l_check = 0;
 		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
@@ -203,7 +203,7 @@ public:
 		allData[5] = data>>16;
 		allData[6] = data>>24;
 
-		allData[7] = GetCheck();
+		allData[7] = CalculateCheck();
 		
 		return TRUE;
 	}
@@ -221,10 +221,10 @@ public:
 
 		allData[0] = '$';
 		allData[1] = command;
-		allData[3] = addr>>24;
-		allData[4] = addr>>16;
-		allData[5] = addr>>8;
-		allData[6] = addr;
+		allData[3] = addr;
+		allData[4] = addr>>8;
+		allData[5] = addr>>16;
+		allData[6] = addr>>24;
 
 		for (UCHAR i=0;i<length;i++)
 		{
@@ -242,7 +242,7 @@ public:
 		allData[2] = length;
 		this->dataLength = length;
 
-		allData[totalLength-1] = GetCheck();
+		allData[totalLength-1] = CalculateCheck();
 		return TRUE;
 	}
 };

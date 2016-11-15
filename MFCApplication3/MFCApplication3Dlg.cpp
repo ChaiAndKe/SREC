@@ -450,11 +450,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		{
 			AfxMessageBox(_T("文件打开失败，请重试！"));
 			ShowInfo(_T("文件打开失败，请重试！"),0);
+			ShowInfo(_T("退出BootLoader"),0);
 			return;
 		}else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
 		{
 			AfxMessageBox(_T("文件格式错误，请检查！"));
 			ShowInfo(_T("文件格式错误，请检查！"),0);
+			ShowInfo(_T("退出BootLoader"),0);
 			fileToWrite->Close();
 			delete fileToWrite;
 			fileToWrite = NULL;
@@ -476,6 +478,14 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		((CEdit *)GetDlgItem(IDC_EDIT_STARTADDRESS))->GetWindowTextW(str);
 		if(!CStringToUINT(str,startAddress,_T("地址")))
 		{
+			return;
+		}
+
+		if (startAddress%8!=0)
+		{
+			AfxMessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"));
+			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"),0);
+			ShowInfo(_T("退出BootLoader"),0);
 			return;
 		}
 
@@ -643,6 +653,7 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 		sendData2->SetData(ORDER_GETVERSION,len,0,NULL);
 		break;
 	case ORDER_MAINSTART:
+		sendData2->SetData(ORDER_MAINSTART,len,addr,NULL);
 		break;
 	case ORDER_PROGRAM:
 		sendData2->SetData(ORDER_PROGRAM,len,addr,d);
@@ -666,11 +677,6 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 {
 	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
 
-#if 0
-	CString err = _T("密码错误");
-	dlg->ShowErrMessageBox(err);//调用后线程会阻塞
-	TRACE("继续执行");
-#endif
 
 	//sendOrder(boot);
 	//sendOrder(key);
@@ -702,6 +708,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case PASSRORD_NOTOK:
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("密码错误"));
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return PASSRORD_NOTOK;
 				break;
 			case DATA_ERR:
@@ -728,6 +735,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定，终止发送"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -753,6 +761,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case KEY_NOTOK:
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("校验错误"));
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
@@ -779,6 +788,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -804,6 +814,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case ERASE_NOTOK:
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("擦除flash失败"));
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return ERASE_NOTOK;
 				break;
 			case DATA_ERR:
@@ -830,6 +841,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定，擦除命令发送失败"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -888,6 +900,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -916,6 +929,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case GETVERSION_NOTOK:
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("密码错误"));
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return GETVERSION_NOTOK;
 				break;
 			case DATA_ERR:
@@ -941,6 +955,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -950,12 +965,6 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 {
 	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
-
-#if 0
-	CString err = _T("密码错误");
-	dlg->ShowErrMessageBox(err);//调用后线程会阻塞
-	TRACE("继续执行");
-#endif
 
 	//sendOrder(boot);
 	//sendOrder(key);
@@ -988,6 +997,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("密码错误"));
 				dlg->ShowInfo(_T("密码错误"),0);
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return PASSRORD_NOTOK;
 				break;
 			case DATA_ERR:
@@ -1014,6 +1024,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
@@ -1040,6 +1051,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("校验错误"));
 				dlg->ShowInfo(_T("校验错误，发送终止"),0);
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
@@ -1066,10 +1078,12 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
 		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
+		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
 
 	//3.发送PROGRAM
+	CString tmp;
 	int a=FILE_READ_NORMAL;
 	while(a==FILE_READ_NORMAL)
 	{
@@ -1096,14 +1110,15 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 					//收到数据，判断数据是否正确
 					switch(dlg->receiceData->returnValue)
 					{
-					case ERASE_OK:
+					case PROGRAM_OK:
 						exitSign = TRUE;
+
+						tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
+						tmp+="%";
+						::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+
 						break;
-					case ERASE_NOTOK:
-						/*SetEvent(dlg->exitEvent1);*/
-						dlg->ShowErrMessageBox(_T("密码错误"));
-						return ERASE_NOTOK;
-						break;
+					case PROGRAM_NOTOK:
 					case DATA_ERR:
 						exitSign = FALSE;
 						break;
@@ -1135,6 +1150,11 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			break;
 		case FILE_READ_END:
 			//文件结束
+			tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
+			tmp+="%";
+			::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+
+			dlg->ShowInfo(_T("读取结束"),0);
 			break;
 		}
 	}

@@ -22,7 +22,7 @@ TURNDLL_API char strTobin( char a )
 	return a;
 }
 
-TURNDLL_API UINT GetKey(UINT a)
+TURNDLL_API UINT CalculateKey(UINT a)
 {
 	return a;
 }
