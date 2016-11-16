@@ -706,7 +706,6 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				exitSign = TRUE;
 				break;
 			case PASSRORD_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("密码错误"));
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return PASSRORD_NOTOK;
@@ -719,7 +718,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		}
 		else
 		{
-			//超时，提示并退出			
+			//超时，提示并退出
 #ifdef _TEST
 			exitSign = TRUE;
 #else
@@ -758,15 +757,15 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				exitSign = TRUE;
 				dlg->ShowInfo(_T("校验通过"),0);
 				break;
-			case KEY_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
+			case KEY_NOTOK://修改后的应答表里无此项，可删除
 				dlg->ShowErrMessageBox(_T("校验错误"));
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
-				dlg->ShowInfo(_T("KEY命令校验错误，重新发送"),i);
-				exitSign = FALSE;
+				dlg->ShowErrMessageBox(_T("校验错误"));
+				dlg->ShowInfo(_T("退出BootLoader"),0);
+				return DATA_ERR;
 				break;
 			}
 		}
@@ -812,7 +811,6 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				dlg->ShowInfo(_T("擦除完成"),0);
 				break;
 			case ERASE_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowErrMessageBox(_T("擦除flash失败"));
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return ERASE_NOTOK;
@@ -864,17 +862,15 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case BOOTEND_OK:
 				exitSign = TRUE;
 				//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
-				tmp = "数据传输错误次数: ";
-				tmp1.Format(_T("%d, flash写入失败的次数: "),dlg->receiceData->allData[3]);
-				tmp+= tmp1;
-				tmp1.Format(_T("%d"),dlg->receiceData->allData[4]);
+				tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
+				tmp = tmp1;
+				tmp1.Format(_T(" flash写入失败的次数:%d次"),dlg->receiceData->allData[4]);
 				tmp+= tmp1;
 				dlg->ShowInfo(tmp,0);
 				break;
 			case BOOTEND_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
 				dlg->ShowInfo(_T("退出Boot失败，执行GetVersion命令"),0);
-//				return BOOTEND_NOTOK;
+				exitSign = TRUE;
 				break;
 			case DATA_ERR:
 				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
@@ -921,14 +917,16 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			{
 			case GETVERSION_OK:
 				tmp = "BootLoader版本为: ";
-				tmp1.Format(_T("%d.%d"),dlg->receiceData->allData[3],dlg->receiceData->allData[4]);
+				tmp1.Format(_T("%d.%d"),
+					dlg->receiceData->allData[3],
+					dlg->receiceData->allData[4]);
 				tmp+= tmp1;
 				dlg->ShowInfo(tmp,0);
 				exitSign = TRUE;
 				break;
 			case GETVERSION_NOTOK:
 				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("密码错误"));
+				dlg->ShowInfo(_T("获取BootLoader版本失败"),0);
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return GETVERSION_NOTOK;
 				break;
@@ -958,7 +956,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		dlg->ShowInfo(_T("退出BootLoader"),0);
 		return DATA_ERR;
 	}
-
+	dlg->ShowInfo(_T("BootLoader完成"),0);
 	return 0;
 }
 
@@ -1055,8 +1053,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
-				dlg->ShowInfo(_T("KEY校验错误，重新发送"),i);
-				exitSign = FALSE;
+				dlg->ShowInfo(_T("校验错误，发送终止"),0);
+				dlg->ShowInfo(_T("退出BootLoader"),0);
+				return DATA_ERR;
 				break;
 			}
 		}
@@ -1146,6 +1145,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			break;
 		case FILE_READ_ERROR:
 			//读取错误
+			dlg->ShowInfo(_T("读取错误，停止发送"),0);
 			return FILE_READ_ERROR;
 			break;
 		case FILE_READ_END:
@@ -1159,7 +1159,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		}
 	}
 
-	
+	CString tmp1;
 
 	//4.发送boot_end
 	i = 0;
@@ -1178,13 +1178,19 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			{
 			case BOOTEND_OK:
 				exitSign = TRUE;
+				//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
+				tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
+				tmp = tmp1;
+				tmp1.Format(_T(" flash写入失败的次数:%d次"),dlg->receiceData->allData[4]);
+				tmp+= tmp1;
+				dlg->ShowInfo(tmp,0);
 				break;
 			case BOOTEND_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("密码错误"));
-				return BOOTEND_NOTOK;
+				dlg->ShowInfo(_T("退出Boot失败，执行GetVersion命令"),0);
+				exitSign = TRUE;
 				break;
 			case DATA_ERR:
+				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
 				exitSign = FALSE;
 				break;
 			}
@@ -1225,14 +1231,21 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			switch(dlg->receiceData->returnValue)
 			{
 			case GETVERSION_OK:
+				tmp = "BootLoader版本为: ";
+				tmp1.Format(_T("%d.%d"),
+					dlg->receiceData->allData[3],
+					dlg->receiceData->allData[4]);
+				tmp+= tmp1;
+				dlg->ShowInfo(tmp,0);
 				exitSign = TRUE;
 				break;
 			case GETVERSION_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("密码错误"));
+				dlg->ShowInfo(_T("获取BootLoader版本失败"),0);
+				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return GETVERSION_NOTOK;
 				break;
 			case DATA_ERR:
+				dlg->ShowInfo(_T("GET_VERSION校验错误"),i);
 				exitSign = FALSE;
 				break;
 			}
@@ -1260,6 +1273,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 	//6.从main启动
 	if (dlg->m_startFromMain!=1)
 	{
+		dlg->ShowInfo(_T("BootLoader完成"),0);
 		return 0;
 	}
 	i = 0;
@@ -1280,16 +1294,16 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			//收到数据，判断数据是否正确
 			switch(dlg->receiceData->returnValue)
 			{
-			case PASSWORD_OK:
+			case MAINSTART_OK:
+				dlg->ShowInfo(_T("主函数进入成功"),0);
 				exitSign = TRUE;
 				break;
-			case PASSRORD_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("密码错误"));
-				return PASSRORD_NOTOK;
+			case MAINSTART_NOTOK:
+				dlg->ShowInfo(_T("主函数进入不成功"),0);
+				return MAINSTART_NOTOK;
 				break;
 			case DATA_ERR:
-				dlg->ShowInfo(_T("BOOT校验错误"),i);
+				dlg->ShowInfo(_T("MAINSTART命令校验错误，重新发送"),i);
 				exitSign = FALSE;
 				break;
 			}
@@ -1313,6 +1327,6 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
 		return DATA_ERR;
 	}
-
+	dlg->ShowInfo(_T("BootLoader完成"),0);
 	return 0;
 }

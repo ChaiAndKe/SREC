@@ -1,7 +1,7 @@
 #ifndef HEADER_H
 #define HEADER_H
 
-#if 1
+#if 0
 #define _TEST
 #endif
 
@@ -139,7 +139,7 @@ public:
 	UCHAR dataLength;
 	UCHAR totalLength;
 	UCHAR m_check;
-	UCHAR* allData;
+	UCHAR* allData;//发送和接受的数据都在这里
 	UINT random;
 
 private:
