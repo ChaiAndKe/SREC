@@ -1,6 +1,6 @@
-## Welcome to MarkdownPad 2 ##
+## About ##
 
-**MarkdownPad** is a full-featured Markdown editor for Windows.
+**This Application** is a developed by vs2010 with c++(MFC).
 
 ### Built exclusively for Markdown ###
 
