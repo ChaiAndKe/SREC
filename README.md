@@ -1,4 +1,5 @@
 ## About ##
+![图片说明](https://github.com/chailyuan/raw/develop/shootscreen.jpg)
 
 **This Application** is a developed by vs2010 with c++(MFC).
 
