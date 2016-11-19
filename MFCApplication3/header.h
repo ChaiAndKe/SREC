@@ -60,8 +60,15 @@ const int _250KBPS = 2;
 const int _125KBPS = 3;
 const int _100KBPS = 4;
 
+const UINT MSGID_FARME1 = 1;
+const UINT MSGID_FARME2[3] = {1, 2, 3};
+const UINT MSGID_FRAMEREV = 0;
+
 //CAN错误定义
 const int CAN_CONNECT_OK = 0;
+const int CAN_OPENDEV_ERROR = 1;//打开设备失败
+const int CAN_INITDEV_ERROR = 2;//初始化CAN失败
+
 const int CAN_CONNECT_NOTOK = 1;
 const int CAN_DISCONNECT_OK = 0;
 const int CAN_DISCONNECT_NOTOK = 1;
@@ -154,6 +161,15 @@ public:
 		memset(allData,0x00,totalLength*sizeof(UCHAR));
 	}
 public:
+	UCHAR GetCheck()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}
 	UCHAR CalculateCheck()
 	{
 		UCHAR l_check = 0;

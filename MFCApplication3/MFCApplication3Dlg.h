@@ -57,6 +57,9 @@ public:
 	UINT passWord;
 
 	BOOL m_Connect;//CAN口的连接状态
+	DWORD m_devtype;//CAN设备类型 added by kexf
+	DWORD m_devind;//CAN设备索引号
+	DWORD m_cannum;//CAN通道 
 	CMenu m_Menu;
 	CTestListBox m_ListInfo;
 

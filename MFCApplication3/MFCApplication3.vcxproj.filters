@@ -48,6 +48,9 @@
     <ClInclude Include="AnalysisFile.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ControlCAN.H">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MFCApplication3.cpp">
