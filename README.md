@@ -1,5 +1,5 @@
 ## About ##
-![图片说明](https://github.com/chailyuan/SREC/raw/develop/shootscreen.jpg)
+![图片说明](https://github.com/ChaiAndKe/SREC/raw/master/shootscreen.jpg)
 
 **This Application** is a developed by vs2010 with c++(MFC).
 
