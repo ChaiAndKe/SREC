@@ -154,7 +154,8 @@ private:
 
 public:
 	BaseType(UCHAR totalLength){
-		startSign = '$';command = 0;returnValue = 0;m_check = 0;dataLength = 0;
+		//startSign = '$'; //modified by kexf
+		command = 0;returnValue = 0;m_check = 0;dataLength = 0;
 
 		this->totalLength = totalLength;
 		allData = new UCHAR[totalLength];
