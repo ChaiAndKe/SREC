@@ -7,6 +7,10 @@
 #include "MFCApplication3Dlg.h"
 #include "afxdialogex.h"
 
+//CAN 通信应包含的头文件
+#include "ControlCAN.h"
+#pragma comment(lib,"controlcan.lib")
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -607,16 +611,49 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 	
 }
 
-int CMFCApplication3Dlg::ConnectCan(int canType,int channel,int baudRate)
+int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 {
-	//TODO
+	const unsigned char baudRate[5][2]={
+		{0x00,0x14},//1000Kbps
+		{0x00,0x1C},//500Kbps
+		{0x01,0x1C},//250Kbps
+		{0x04,0x1C}//100Kbps
+	};
+	const unsigned int devtype[2]={
+		VCI_USBCAN2,
+		VCI_USBCAN_2E_U
+	};
+	DWORD devindex = 0;
+	VCI_INIT_CONFIG init_config;
+	init_config.AccCode = 0x00000000;//验收码
+	init_config.AccMask = 0xFFFFFFFF;//屏蔽码
+	init_config.Timing0 = baudRate[baudRateIndex][0];//设置波特率
+	init_config.Timing1 = baudRate[baudRateIndex][1];
+	init_config.Filter = 1;//单滤波
+	init_config.Mode = 0;//正常模式
+
+	m_devtype = devtype[typeIndex];
+	m_devind = 0;//CAN设备索引号
+	m_cannum = channel;//
+
+	if(VCI_OpenDevice(m_devtype, m_devind, 0) != STATUS_OK)
+	{
+		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
+		return CAN_OPENDEV_ERROR;
+	}
+	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
+	{
+		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
+		VCI_CloseDevice(m_devtype, m_devind);
+		return CAN_INITDEV_ERROR;
+	}
 
 	return CAN_CONNECT_OK;
 }
 int CMFCApplication3Dlg::DisConnectCan(int canType,int channel,int baudRate)
 {
-	//TODO
-
+	Sleep(500);//断开连接之前先休眠
+	VCI_CloseDevice(m_devtype,m_devind);
 	return CAN_DISCONNECT_OK;
 }
 void CMFCApplication3Dlg::ShowInfo(CString str, int code)
@@ -663,13 +700,129 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 	return TRUE;
 }
 
-void CMFCApplication3Dlg::SendOrder(const BaseType *d)
+void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 {
+	VCI_CAN_OBJ canframe;
+	canframe.SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe.ExternFlag = 0;//0:标准帧,1:扩展帧
+	canframe.RemoteFlag = 0;//禁用远程帧
+	canframe.DataLen = 8;
 
+	if((ORDER_BOOT == sendframe->command) || (ORDER_KEY == sendframe->command))//帧格式1
+	{
+		if(sendframe->dataLength != 8)
+		{
+			//TODO:数据长度异常
+			ShowInfo(_T("CAN发送数据长度异常"),0);
+		}
+		else
+		{
+			canframe.ID = MSGID_FARME1;//帧格式1 ID
+			memcpy(&canframe.Data, &sendframe->allData, 8);
+			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
+			{
+				//do nothing
+			}
+			else
+			{
+				//TODO：发送失败
+				ShowInfo(_T("CAN发送失败"),0);
+			}
+		}
+	}
+	else//帧格式2
+	{
+		if(sendframe->dataLength != 24)
+		{
+			//TODO:数据长度异常
+		}
+		else
+		{
+			USHORT canframeNum = 0;
+			ULONG transmitStatus = 0;
+			for(canframeNum = 0; canframeNum < 3; canframeNum++)
+			{
+				canframe.ID = MSGID_FARME2[canframeNum];
+				memcpy(&canframe.Data, &(sendframe->allData[canframeNum*8]), 8);
+				if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
+				{
+					//do nothing
+				}
+				else
+				{
+					//TODO：一次发送失败，跳出 or 重试 is a question
+					ShowInfo(_T("CAN发送失败"),canframeNum);
+				}				
+			}
+		}
+	}
 }
 
 UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 {
+	CMFCApplication3Dlg *dlg = (CMFCApplication3Dlg *)param;
+	VCI_CAN_OBJ frameinfo[50];
+	VCI_ERR_INFO errinfo;
+	int len = 1;
+	int i = 0;
+	while(1)
+	{
+		Sleep(1);
+		if(FALSE == dlg->m_Connect)
+			break;
+		len=VCI_Receive(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, frameinfo, 50, 200);
+		if(len<=0)
+		{
+			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
+			//千万不能省略这一步（即使你可能不想知道错误码是什么）
+			VCI_ReadErrInfo(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, &errinfo);
+		}
+		else
+		{
+			/*
+			for(i = 0; i < len; i++)
+			{
+				if(frameinfo[i].RemoteFlag != 0)//
+				{
+					//TODO:出现了远程帧
+				}
+				else
+				{
+					if(frameinfo[i].ID == MSGID_FRAMEREV)//接收正确的帧ID
+					{
+						dlg->receiceData->dataLength = frameinfo[i].DataLen;
+					}
+				}
+			}*/
+			if(frameinfo[len-1].RemoteFlag != 0)//每次都读最新的数据
+			{
+				//TODO:出现了远程帧
+				dlg->ShowInfo(_T("出现远程帧"),0);
+			}
+			else
+			{
+				if((frameinfo[len-1].ID == MSGID_FRAMEREV) && (frameinfo[len-1].DataLen == 8))//接收正确的帧ID
+				{
+					dlg->receiceData->SetAllData((const char *)(&(frameinfo[len-1].Data[0])), 8);
+					if((dlg->receiceData->GetCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
+					{
+						dlg->receiceData->startSign = frameinfo[len-1].Data[0];
+						dlg->receiceData->returnValue = frameinfo[len-1].Data[1];
+						dlg->receiceData->dataLength = frameinfo[len-1].Data[2];
+						dlg->receiceData->m_check = frameinfo[len-1].Data[7];
+					}
+					else
+					{
+						//接收数据帧错误
+						memset(dlg->receiceData->allData, 0x00, dlg->receiceData->totalLength);
+						dlg->receiceData->returnValue = 0x00;
+					}
+					
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 
