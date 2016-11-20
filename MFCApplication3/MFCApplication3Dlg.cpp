@@ -299,6 +299,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 			((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(TRUE);
 			((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("断开CAN"));
 
+			AfxBeginThread(ReceiveThread,this);
 			//set the status bar
 			::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已连接"));
 			break;
@@ -427,10 +428,11 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
+	/*
 	if (!CStringToUINT(str,passWord,_T("密码")))
 	{
 		return;
-	}
+	}*/
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件
@@ -613,24 +615,49 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 
 int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 {
-	const unsigned char baudRate[5][2]={
+	const unsigned char baudRate[4][2]={
 		{0x00,0x14},//1000Kbps
 		{0x00,0x1C},//500Kbps
 		{0x01,0x1C},//250Kbps
 		{0x04,0x1C}//100Kbps
+	};
+	const DWORD baudRate_E[4] = {
+		0x060003, //1000Kbps
+		//0x060004,//800Kbps
+		0x060007,//500Kbps
+		0x1C0008,//250Kbps
+		//0x1C0011, //125Kbps
+		0x160023 //100Kbps
+		//0x1C002C, //20Kbps
+		//0x1600B3, //20Kbps
+		//0x1C00E0,//10Kbps
+		//0x1C01C1//5Kbps
 	};
 	const unsigned int devtype[2]={
 		VCI_USBCAN2,
 		VCI_USBCAN_2E_U
 	};
 	DWORD devindex = 0;
+	DWORD baud_E = 0;
 	VCI_INIT_CONFIG init_config;
-	init_config.AccCode = 0x00000000;//验收码
-	init_config.AccMask = 0xFFFFFFFF;//屏蔽码
-	init_config.Timing0 = baudRate[baudRateIndex][0];//设置波特率
-	init_config.Timing1 = baudRate[baudRateIndex][1];
-	init_config.Filter = 1;//单滤波
-	init_config.Mode = 0;//正常模式
+	VCI_FILTER_RECORD filterRecord;	//for USBCAN-2E-U
+
+	if(0 == typeIndex)//for USBCAN　exclude USBCAN-2E-U series
+	{
+		init_config.AccCode = 0x00000000;//验收码
+		init_config.AccMask = 0xFFFFFFFF;//屏蔽码
+		init_config.Timing0 = baudRate[baudRateIndex][0];//设置波特率
+		init_config.Timing1 = baudRate[baudRateIndex][1];
+		init_config.Filter = 1;//单滤波
+		init_config.Mode = 0;//正常模式
+	}
+	else if(1 == typeIndex)//for USBCAN USBCAN-2E-U series
+	{
+		init_config.Mode = 0;//正常模式
+		baud_E = baudRate_E[baudRateIndex];
+		filterRecord.Start = 0x00000000;
+		filterRecord.End = 0x00000000;
+	}
 
 	m_devtype = devtype[typeIndex];
 	m_devind = 0;//CAN设备索引号
@@ -641,13 +668,37 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
 		return CAN_OPENDEV_ERROR;
 	}
+	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to init the baud 
+	{
+		if (VCI_SetReference(m_devtype,m_devind, m_cannum, 0, &baud_E) != STATUS_OK)
+		{
+			MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK | MB_ICONQUESTION);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_OPENDEV_ERROR;
+		}
+	}
 	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
 	{
 		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
 		VCI_CloseDevice(m_devtype, m_devind);
 		return CAN_INITDEV_ERROR;
 	}
-
+	if(VCI_StartCAN(m_devtype,m_devind,m_cannum) != 1)
+	{
+		MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
+		return CAN_STARTDEV_ERROR;
+	}
+	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to set the filter
+	{
+		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
+		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
+		{
+			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_SETFILTER_ERROR;
+		}
+	}
+	
 	return CAN_CONNECT_OK;
 }
 int CMFCApplication3Dlg::DisConnectCan(int canType,int channel,int baudRate)
@@ -710,7 +761,7 @@ void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 
 	if((ORDER_BOOT == sendframe->command) || (ORDER_KEY == sendframe->command))//帧格式1
 	{
-		if(sendframe->dataLength != 8)
+		if(sendframe->totalLength != 8)
 		{
 			//TODO:数据长度异常
 			ShowInfo(_T("CAN发送数据长度异常"),0);
@@ -732,9 +783,10 @@ void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 	}
 	else//帧格式2
 	{
-		if(sendframe->dataLength != 24)
+		if(sendframe->totalLength != 24)
 		{
 			//TODO:数据长度异常
+			ShowInfo(_T("CAN发送数据长度异常"),0);
 		}
 		else
 		{
@@ -761,16 +813,23 @@ void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 {
 	CMFCApplication3Dlg *dlg = (CMFCApplication3Dlg *)param;
-	VCI_CAN_OBJ frameinfo[50];
+	//VCI_CAN_OBJ frameinfo[50];
 	VCI_ERR_INFO errinfo;
 	int len = 1;
+	int receiveBufLen;
 	int i = 0;
 	while(1)
 	{
 		Sleep(1);
 		if(FALSE == dlg->m_Connect)
 			break;
-		len=VCI_Receive(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, frameinfo, 50, 200);
+		receiveBufLen = VCI_GetReceiveNum(dlg->m_devtype,dlg->m_devind,dlg->m_cannum);
+		if (receiveBufLen <= 0)
+		{
+			continue;
+		}
+		PVCI_CAN_OBJ frameinfo = new VCI_CAN_OBJ[receiveBufLen];
+		len = VCI_Receive(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, frameinfo, receiveBufLen, 200);
 		if(len<=0)
 		{
 			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
@@ -810,6 +869,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 						dlg->receiceData->returnValue = frameinfo[len-1].Data[1];
 						dlg->receiceData->dataLength = frameinfo[len-1].Data[2];
 						dlg->receiceData->m_check = frameinfo[len-1].Data[7];
+						SetEvent(dlg->receiveEvent);//设置接收事件
 					}
 					else
 					{
