@@ -869,6 +869,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				break;
 			default:
 				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
 				break;
 			}
 		}
@@ -923,6 +924,10 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return DATA_ERR;
 				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
+				break;
 			}
 		}
 		else
@@ -973,6 +978,10 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				break;
 			case DATA_ERR:
 				dlg->ShowInfo(_T("ERASE命令校验错误，重新发送"),i);
+				exitSign = FALSE;
+				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
 				exitSign = FALSE;
 				break;
 			}
@@ -1032,6 +1041,10 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
 				exitSign = FALSE;
 				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
+				break;
 			}
 		}
 		else
@@ -1088,6 +1101,10 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				break;
 			case DATA_ERR:
 				dlg->ShowInfo(_T("GET_VERSION校验错误"),i);
+				exitSign = FALSE;
+				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
 				exitSign = FALSE;
 				break;
 			}
@@ -1158,6 +1175,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				dlg->ShowInfo(_T("密码校验错误,重新发送"),i);
 				exitSign = FALSE;
 				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
+				break;
 			}
 		}
 		else
@@ -1212,6 +1233,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				dlg->ShowInfo(_T("校验错误，发送终止"),0);
 				dlg->ShowInfo(_T("退出BootLoader"),0);
 				return DATA_ERR;
+				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
 				break;
 			}
 		}
@@ -1275,6 +1300,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 						break;
 					case PROGRAM_NOTOK:
 					case DATA_ERR:
+						exitSign = FALSE;
+						break;
+					default:
+						dlg->ShowInfo(_T("未定义的返回值"),0);
 						exitSign = FALSE;
 						break;
 					}
@@ -1349,6 +1378,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
 				exitSign = FALSE;
 				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				exitSign = FALSE;
+				break;
 			}
 		}
 		else
@@ -1402,6 +1435,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				break;
 			case DATA_ERR:
 				dlg->ShowInfo(_T("GET_VERSION校验错误"),i);
+				exitSign = FALSE;
+				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
 				exitSign = FALSE;
 				break;
 			}
@@ -1460,6 +1497,10 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				break;
 			case DATA_ERR:
 				dlg->ShowInfo(_T("MAINSTART命令校验错误，重新发送"),i);
+				exitSign = FALSE;
+				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
 				exitSign = FALSE;
 				break;
 			}
