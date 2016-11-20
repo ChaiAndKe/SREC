@@ -1302,10 +1302,6 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 					case DATA_ERR:
 						exitSign = FALSE;
 						break;
-					default:
-						dlg->ShowInfo(_T("未定义的返回值"),0);
-						exitSign = FALSE;
-						break;
 					}
 				}
 				else
