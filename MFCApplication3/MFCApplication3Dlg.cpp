@@ -867,6 +867,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				dlg->ShowInfo(_T("BOOT命令校验错误，重新发送"),i);
 				exitSign = FALSE;
 				break;
+			default:
+				dlg->ShowInfo(_T("未定义的返回值"),0);
+				break;
 			}
 		}
 		else
