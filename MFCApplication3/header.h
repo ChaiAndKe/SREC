@@ -68,6 +68,8 @@ const UINT MSGID_FRAMEREV = 0;
 const int CAN_CONNECT_OK = 0;
 const int CAN_OPENDEV_ERROR = 1;//打开设备失败
 const int CAN_INITDEV_ERROR = 2;//初始化CAN失败
+const int CAN_STARTDEV_ERROR = 3;//启动CAN失败
+const int CAN_SETFILTER_ERROR = 4;//设置滤波失败 for USBCAN－2E
 
 const int CAN_CONNECT_NOTOK = 1;
 const int CAN_DISCONNECT_OK = 0;
