@@ -198,6 +198,7 @@ public:
 			dataLength = d[2];
 			m_check=d[7];
 		}
+		return 0;
 	}
 
 public:
