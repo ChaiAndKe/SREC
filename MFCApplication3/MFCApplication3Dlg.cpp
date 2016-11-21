@@ -676,6 +676,13 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_OPENDEV_ERROR;
 		}
+		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
+		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
+		{
+			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_SETFILTER_ERROR;
+		}
 	}
 	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
 	{
@@ -688,6 +695,7 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
 		return CAN_STARTDEV_ERROR;
 	}
+	/*
 	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to set the filter
 	{
 		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
@@ -697,7 +705,7 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_SETFILTER_ERROR;
 		}
-	}
+	}*/
 	
 	return CAN_CONNECT_OK;
 }
@@ -830,7 +838,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 		}
 		PVCI_CAN_OBJ frameinfo = new VCI_CAN_OBJ[receiveBufLen];
 		len = VCI_Receive(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, frameinfo, receiveBufLen, 200);
-		if(len<=0)
+		if(len <= 0)
 		{
 			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
 			//千万不能省略这一步（即使你可能不想知道错误码是什么）
@@ -881,6 +889,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 				}
 			}
 		}
+		delete [] frameinfo;
 	}
 
 	return 0;
