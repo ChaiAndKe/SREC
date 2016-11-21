@@ -192,12 +192,13 @@ public:
 		{
 			allData[i]=d[i];
 		}
+		/*
 		if (d[0]==0xA5)
 		{
 			returnValue = d[1];
 			dataLength = d[2];
 			m_check=d[7];
-		}
+		}*/
 		return 0;
 	}
 
