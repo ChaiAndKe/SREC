@@ -764,7 +764,7 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 {
 	VCI_CAN_OBJ canframe;
-	canframe.SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe.SendType = 2;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
 	canframe.ExternFlag = 0;//0:标准帧,1:扩展帧
 	canframe.RemoteFlag = 0;//禁用远程帧
 	canframe.DataLen = 8;
@@ -779,7 +779,7 @@ void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 		else
 		{
 			canframe.ID = MSGID_FARME1;//帧格式1 ID
-			memcpy(&canframe.Data, &sendframe->allData, 8);
+			memcpy(canframe.Data, sendframe->allData, 8);
 			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
 			{
 				//do nothing
@@ -805,7 +805,7 @@ void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			for(canframeNum = 0; canframeNum < 3; canframeNum++)
 			{
 				canframe.ID = MSGID_FARME2[canframeNum];
-				memcpy(&canframe.Data, &(sendframe->allData[canframeNum*8]), 8);
+				memcpy(canframe.Data, &(sendframe->allData[canframeNum*8]), 8);
 				if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
 				{
 					//do nothing
@@ -872,7 +872,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 			{
 				if((frameinfo[len-1].ID == MSGID_FRAMEREV) && (frameinfo[len-1].DataLen == 8))//接收正确的帧ID
 				{
-					dlg->receiceData->SetAllData((const char *)(&(frameinfo[len-1].Data[0])), 8);
+					dlg->receiceData->SetAllData((const char *)(frameinfo[len-1].Data), 8);
 					if((dlg->receiceData->GetCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
 					{
 						dlg->receiceData->startSign = frameinfo[len-1].Data[0];
@@ -889,6 +889,66 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 					}
 					
 				}
+				//在信息提示框中打印当前接收到的数据
+				{
+					CString str,tmpstr;
+					str = "";
+					tmpstr.Format(_T("帧ID:%08x "),frameinfo[len-1].ID);
+					str += tmpstr;
+					tmpstr = " 数据：";
+					str += tmpstr;
+					for(int j = 0; j < frameinfo[i].DataLen; j++)
+					{
+						tmpstr.Format(_T("%02x "),frameinfo[len-1].Data[j]);
+						str += tmpstr;
+					}
+					dlg->ShowInfo(str,0);
+				}
+				//模拟器：模拟下位机发送回令
+				{
+					static int programFrameNum = 0;
+					static BOOL programFrameStart = FALSE;
+					if(programFrameStart)
+					{
+						programFrameNum++;
+						if(programFrameNum == 3)
+						{
+							dlg->receiceData->returnValue = PROGRAM_OK;
+							programFrameNum = 0;
+							programFrameStart = FALSE;
+						}
+					}
+					if(ORDER_BOOT == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = PASSWORD_OK;
+					}
+					else if(ORDER_KEY == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = KEY_OK;
+					}
+					else if(ORDER_ERASE == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = ERASE_OK;
+					}
+					else if(ORDER_PROGRAM == frameinfo[len-1].Data[1])
+					{
+						programFrameStart = TRUE;
+					}
+					else if(ORDER_GETVERSION == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = GETVERSION_OK;
+					}
+					else if(ORDER_MAINSTART == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = MAINSTART_OK;
+					}
+					else if(ORDER_BOOTEND == frameinfo[len-1].Data[1])
+					{
+						dlg->receiceData->returnValue = BOOTEND_OK;
+					}
+					SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+
 			}
 		}
 		delete [] frameinfo;
