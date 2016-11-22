@@ -119,8 +119,10 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 #ifdef _DEBUG
 	SetWindowText(_T("MPC5744P BootLoader通信_DEBUG_MODE"));
 	((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x00000000"));
 #else
 	SetWindowText(_T("MPC5744P BootLoader通信"));
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 #endif
 
 	//加载菜单栏
@@ -156,7 +158,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	//0x00FE0000
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->SetWindowTextW(_T("0x00FE0000"));
 	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x"));
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
+//	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 	((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->SetCheck(TRUE);
 	//禁用地址
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->EnableWindow(FALSE);
@@ -428,11 +430,11 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
-	/*
+	
 	if (!CStringToUINT(str,passWord,_T("密码")))
 	{
 		return;
-	}*/
+	}
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件

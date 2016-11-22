@@ -12,6 +12,13 @@
 - release经由团队讨论确认产生
 - 开发时避免无意义代码修改，如删除空行空格调整位置等
 
+2016-11-22 09:27:23
+
+- by linyuan
+- 1.取消对CAN连接函数中密码获取判断的屏蔽
+- 2.在initialDialog函数中对密码的初始化分debug模式和release模式，debug模式下全写0，release模式下只写0x。
+
+
 2016-11-21 08:24:39
 
 - by xianfeng
