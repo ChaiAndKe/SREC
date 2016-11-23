@@ -717,7 +717,7 @@ int CMFCApplication3Dlg::DisConnectCan(int canType,int channel,int baudRate)
 	VCI_CloseDevice(m_devtype,m_devind);
 	return CAN_DISCONNECT_OK;
 }
-void CMFCApplication3Dlg::ShowInfo(CString str, int code)
+void CMFCApplication3Dlg::ShowInfo(CString str, int code/*=0*/)
 {
 	m_ListInfo.InsertString(m_ListInfo.GetCount(),str);
 	m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
@@ -736,7 +736,7 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 		sendData1->SetData(ORDER_BOOT,len,passWord);
 		break;
 	case ORDER_KEY:
-		srand(time(NULL)); 
+		srand((UINT)time(NULL)); 
 		random = rand();
 		receiceData->random =random;
 		sendData1->SetData(ORDER_KEY,len,random);
@@ -873,7 +873,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 				if((frameinfo[len-1].ID == MSGID_FRAMEREV) && (frameinfo[len-1].DataLen == 8))//接收正确的帧ID
 				{
 					dlg->receiceData->SetAllData((const char *)(frameinfo[len-1].Data), 8);
-					if((dlg->receiceData->GetCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
+					if((dlg->receiceData->CalculateCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
 					{
 						dlg->receiceData->startSign = frameinfo[len-1].Data[0];
 						dlg->receiceData->returnValue = frameinfo[len-1].Data[1];
@@ -1038,12 +1038,21 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 		dlg->SendOrder(dlg->sendData1);
 		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
 		{
+			UINT l_key = 0;
 			//收到数据，判断数据是否正确
 			switch(dlg->receiceData->returnValue)
 			{
 			case KEY_OK:
+				//上位机判断校验是否匹配
+				l_key = CalculateKey(dlg->receiceData->random);
+				if (l_key != dlg->receiceData->returnData)
+				{
+					//KEY校验未通过，退出
+					dlg->ShowErrMessageBox(_T("KEY校验错误"));
+					dlg->ShowInfo(_T("退出BootLoader"),0);
+				}
 				exitSign = TRUE;
-				dlg->ShowInfo(_T("校验通过"),0);
+				dlg->ShowInfo(_T("校验通过"),0);				
 				break;
 			case KEY_NOTOK://修改后的应答表里无此项，可删除
 				dlg->ShowErrMessageBox(_T("校验错误"));
@@ -1051,9 +1060,8 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
-				dlg->ShowErrMessageBox(_T("校验错误"));
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return DATA_ERR;
+				dlg->ShowInfo(_T("KEY命令校验错误，重新发送"),i);
+				exitSign = FALSE;
 				break;
 			default:
 				dlg->ShowInfo(_T("未定义的返回值"),0);
@@ -1346,10 +1354,19 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		dlg->SendOrder(dlg->sendData1);
 		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
 		{
+			UINT l_key = 0;
 			//收到数据，判断数据是否正确
 			switch(dlg->receiceData->returnValue)
 			{
 			case KEY_OK:
+				//上位机判断校验是否匹配
+				l_key = CalculateKey(dlg->receiceData->random);
+				if (l_key != dlg->receiceData->returnData)
+				{
+					//KEY校验未通过，退出
+					dlg->ShowErrMessageBox(_T("KEY校验错误"));
+					dlg->ShowInfo(_T("退出BootLoader"),0);
+				}
 				dlg->ShowInfo(_T("校验通过"),0);
 				exitSign = TRUE;
 				break;
@@ -1361,9 +1378,8 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 				return KEY_NOTOK;
 				break;
 			case DATA_ERR:
-				dlg->ShowInfo(_T("校验错误，发送终止"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return DATA_ERR;
+				dlg->ShowInfo(_T("KEY命令校验错误，重新发送"),i);
+				exitSign = FALSE;
 				break;
 			default:
 				dlg->ShowInfo(_T("未定义的返回值"),0);

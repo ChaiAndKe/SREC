@@ -150,6 +150,7 @@ public:
 	UCHAR m_check;
 	UCHAR* allData;//发送和接受的数据都在这里
 	UINT random;
+	UINT returnData;//返回的数据转换成UINT类型，默认地位在前
 
 private:
 	BaseType();
@@ -158,6 +159,7 @@ public:
 	BaseType(UCHAR totalLength){
 		//startSign = '$'; //modified by kexf
 		command = 0;returnValue = 0;m_check = 0;dataLength = 0;
+		returnData=0;
 
 		this->totalLength = totalLength;
 		allData = new UCHAR[totalLength];
@@ -192,6 +194,7 @@ public:
 		{
 			allData[i]=d[i];
 		}
+		returnData = allData[3]|(allData[4]<<8)|(allData[5]<<16)|(allData[6]<<24);
 		/*
 		if (d[0]==0xA5)
 		{
