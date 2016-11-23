@@ -892,61 +892,74 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 				//在信息提示框中打印当前接收到的数据
 				{
 					CString str,tmpstr;
-					str = "";
-					tmpstr.Format(_T("帧ID:%08x "),frameinfo[len-1].ID);
-					str += tmpstr;
-					tmpstr = " 数据：";
-					str += tmpstr;
-					for(int j = 0; j < frameinfo[i].DataLen; j++)
+					for(i = 0; i < len; i++)
 					{
-						tmpstr.Format(_T("%02x "),frameinfo[len-1].Data[j]);
+						str = "";
+						tmpstr.Format(_T("帧ID:%08x "),frameinfo[i].ID);
 						str += tmpstr;
+						tmpstr = " 数据：";
+						str += tmpstr;
+						for(int j = 0; j < frameinfo[i].DataLen; j++)
+						{
+							tmpstr.Format(_T("%02x "),frameinfo[i].Data[j]);
+							str += tmpstr;
+						}
+						dlg->ShowInfo(str,0);
 					}
-					dlg->ShowInfo(str,0);
 				}
 				//模拟器：模拟下位机发送回令
 				{
 					static int programFrameNum = 0;
 					static BOOL programFrameStart = FALSE;
-					if(programFrameStart)
+					for(i = 0;i < len; i++)
 					{
-						programFrameNum++;
-						if(programFrameNum == 3)
+						if(programFrameStart)
 						{
-							dlg->receiceData->returnValue = PROGRAM_OK;
-							programFrameNum = 0;
-							programFrameStart = FALSE;
+							programFrameNum++;
+							if(programFrameNum == 3)
+							{
+								dlg->receiceData->returnValue = PROGRAM_OK;
+								programFrameNum = 0;
+								programFrameStart = FALSE;
+							}
 						}
+						if(ORDER_BOOT == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = PASSWORD_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_KEY == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = KEY_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_ERASE == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = ERASE_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_PROGRAM == frameinfo[i].Data[1])
+						{
+							programFrameStart = TRUE;
+							//SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_GETVERSION == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = GETVERSION_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_MAINSTART == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = MAINSTART_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						else if(ORDER_BOOTEND == frameinfo[i].Data[1])
+						{
+							dlg->receiceData->returnValue = BOOTEND_OK;
+							SetEvent(dlg->receiveEvent);//设置接收事件
+						}
+						
 					}
-					if(ORDER_BOOT == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = PASSWORD_OK;
-					}
-					else if(ORDER_KEY == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = KEY_OK;
-					}
-					else if(ORDER_ERASE == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = ERASE_OK;
-					}
-					else if(ORDER_PROGRAM == frameinfo[len-1].Data[1])
-					{
-						programFrameStart = TRUE;
-					}
-					else if(ORDER_GETVERSION == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = GETVERSION_OK;
-					}
-					else if(ORDER_MAINSTART == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = MAINSTART_OK;
-					}
-					else if(ORDER_BOOTEND == frameinfo[len-1].Data[1])
-					{
-						dlg->receiceData->returnValue = BOOTEND_OK;
-					}
-					SetEvent(dlg->receiveEvent);//设置接收事件
 				}
 
 			}
