@@ -470,6 +470,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			fileToWrite = NULL;
 			return;
 		}
+		fileToWrite->SeekToBegin();
 		ShowInfo(_T("文件打开成功！"),0);
 	}
 
@@ -764,7 +765,11 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 {
 	VCI_CAN_OBJ canframe;
+#ifdef _SIMULATOR
 	canframe.SendType = 2;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+#else
+	canframe.SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+#endif
 	canframe.ExternFlag = 0;//0:标准帧,1:扩展帧
 	canframe.RemoteFlag = 0;//禁用远程帧
 	canframe.DataLen = 8;
@@ -863,22 +868,23 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 					}
 				}
 			}*/
-			if(frameinfo[len-1].RemoteFlag != 0)//每次都读最新的数据
+				
+			for(i = 0; i < len; i++)
 			{
-				//TODO:出现了远程帧
-				dlg->ShowInfo(_T("出现远程帧"),0);
-			}
-			else
-			{
-				if((frameinfo[len-1].ID == MSGID_FRAMEREV) && (frameinfo[len-1].DataLen == 8))//接收正确的帧ID
+				if(frameinfo[i].RemoteFlag != 0)//每次都读最新的数据
 				{
-					dlg->receiceData->SetAllData((const char *)(frameinfo[len-1].Data), 8);
-					if((dlg->receiceData->CalculateCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
+					//TODO:出现了远程帧
+					dlg->ShowInfo(_T("出现远程帧"),0);
+				}
+				else if((frameinfo[i].ID == MSGID_FRAMEREV) && (frameinfo[i].DataLen == 8))//接收正确的帧ID
+				{
+					dlg->receiceData->SetAllData((const char *)(frameinfo[i].Data), 8);
+					if((dlg->receiceData->CalculateCheck() == frameinfo[i].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
 					{
-						dlg->receiceData->startSign = frameinfo[len-1].Data[0];
-						dlg->receiceData->returnValue = frameinfo[len-1].Data[1];
-						dlg->receiceData->dataLength = frameinfo[len-1].Data[2];
-						dlg->receiceData->m_check = frameinfo[len-1].Data[7];
+						dlg->receiceData->startSign = frameinfo[i].Data[0];
+						dlg->receiceData->returnValue = frameinfo[i].Data[1];
+						dlg->receiceData->dataLength = frameinfo[i].Data[2];
+						dlg->receiceData->m_check = frameinfo[i].Data[7];
 						SetEvent(dlg->receiveEvent);//设置接收事件
 					}
 					else
@@ -889,81 +895,120 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 					}
 					
 				}
+			}
 				//在信息提示框中打印当前接收到的数据
+#ifdef _MONITOR
+			{
+				CString str,tmpstr;
+				for(i = 0; i < len; i++)
 				{
-					CString str,tmpstr;
-					for(i = 0; i < len; i++)
+					str = "";
+					tmpstr.Format(_T("帧ID:%08x "),frameinfo[i].ID);
+					str += tmpstr;
+					tmpstr = " 数据：";
+					str += tmpstr;
+					for(int j = 0; j < frameinfo[i].DataLen; j++)
 					{
-						str = "";
-						tmpstr.Format(_T("帧ID:%08x "),frameinfo[i].ID);
+						tmpstr.Format(_T("%02x "),frameinfo[i].Data[j]);
 						str += tmpstr;
-						tmpstr = " 数据：";
-						str += tmpstr;
-						for(int j = 0; j < frameinfo[i].DataLen; j++)
-						{
-							tmpstr.Format(_T("%02x "),frameinfo[i].Data[j]);
-							str += tmpstr;
-						}
-						dlg->ShowInfo(str,0);
 					}
+					dlg->ShowInfo(str,0);
 				}
+			}
+#endif
 				//模拟器：模拟下位机发送回令
+#ifdef _SIMULATOR
+			{
+				static int FrameNum = 0;// for frame type 2
+				static BOOL FrameStart = FALSE;// for frame type 2
+				static UCHAR FrameOrder = 0;
+				for(i = 0;i < len; i++)
 				{
-					static int programFrameNum = 0;
-					static BOOL programFrameStart = FALSE;
-					for(i = 0;i < len; i++)
+					if(FrameStart)// for frame type 2
 					{
-						if(programFrameStart)
+						FrameNum++;
+						if(FrameNum == 3)
 						{
-							programFrameNum++;
-							if(programFrameNum == 3)
+							if(FrameOrder == ORDER_PROGRAM)
 							{
 								dlg->receiceData->returnValue = PROGRAM_OK;
-								programFrameNum = 0;
-								programFrameStart = FALSE;
 							}
-						}
-						if(ORDER_BOOT == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = PASSWORD_OK;
+							else if(FrameOrder == ORDER_ERASE)
+							{
+								dlg->receiceData->returnValue = ERASE_OK;
+							}
+							else if(FrameOrder == ORDER_GETVERSION)
+							{
+								dlg->receiceData->returnValue = GETVERSION_OK;
+							}
+							else if(FrameOrder == ORDER_MAINSTART)
+							{
+								dlg->receiceData->returnValue = MAINSTART_OK;
+							}
+							else if(FrameOrder == ORDER_BOOTEND)
+							{
+								dlg->receiceData->returnValue = BOOTEND_OK;
+							}
+							FrameOrder = 0;
+							FrameNum = 0;
+							FrameStart = FALSE;
 							SetEvent(dlg->receiveEvent);//设置接收事件
 						}
-						else if(ORDER_KEY == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = KEY_OK;
-							SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						else if(ORDER_ERASE == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = ERASE_OK;
-							SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						else if(ORDER_PROGRAM == frameinfo[i].Data[1])
-						{
-							programFrameStart = TRUE;
-							//SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						else if(ORDER_GETVERSION == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = GETVERSION_OK;
-							SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						else if(ORDER_MAINSTART == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = MAINSTART_OK;
-							SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						else if(ORDER_BOOTEND == frameinfo[i].Data[1])
-						{
-							dlg->receiceData->returnValue = BOOTEND_OK;
-							SetEvent(dlg->receiveEvent);//设置接收事件
-						}
-						
 					}
+					if(ORDER_BOOT == frameinfo[i].Data[1])
+					{
+						dlg->receiceData->returnValue = PASSWORD_OK;
+						SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_KEY == frameinfo[i].Data[1])
+					{
+						dlg->receiceData->returnValue = KEY_OK;
+						SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_ERASE == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_ERASE;
+						//dlg->receiceData->returnValue = ERASE_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_PROGRAM == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_PROGRAM;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_GETVERSION == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_GETVERSION;
+						//dlg->receiceData->returnValue = GETVERSION_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_MAINSTART == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_MAINSTART;
+						//dlg->receiceData->returnValue = MAINSTART_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_BOOTEND == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_BOOTEND;
+						//dlg->receiceData->returnValue = BOOTEND_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					
 				}
-
 			}
-		}
+#endif
+		}//else len > 0
 		delete [] frameinfo;
 	}
 
@@ -1056,6 +1101,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			switch(dlg->receiceData->returnValue)
 			{
 			case KEY_OK:
+#ifndef _SIMULATOR
 				//上位机判断校验是否匹配
 				l_key = CalculateKey(dlg->receiceData->random);
 				if (l_key != dlg->receiceData->returnData)
@@ -1064,6 +1110,7 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 					dlg->ShowErrMessageBox(_T("KEY校验错误"));
 					dlg->ShowInfo(_T("退出BootLoader"),0);
 				}
+#endif
 				exitSign = TRUE;
 				dlg->ShowInfo(_T("校验通过"),0);				
 				break;
@@ -1179,10 +1226,11 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 			case BOOTEND_OK:
 				exitSign = TRUE;
 				//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
-				tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
+				/*tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
 				tmp = tmp1;
 				tmp1.Format(_T(" flash写入失败的次数:%d次"),dlg->receiceData->allData[4]);
-				tmp+= tmp1;
+				tmp+= tmp1;*/
+				tmp = "BOOT_END";
 				dlg->ShowInfo(tmp,0);
 				break;
 			case BOOTEND_NOTOK:
@@ -1372,14 +1420,16 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			switch(dlg->receiceData->returnValue)
 			{
 			case KEY_OK:
+#ifndef _SIMULATOR
 				//上位机判断校验是否匹配
-				/*l_key = CalculateKey(dlg->receiceData->random);
+				l_key = CalculateKey(dlg->receiceData->random);
 				if (l_key != dlg->receiceData->returnData)
 				{
 					//KEY校验未通过，退出
 					dlg->ShowErrMessageBox(_T("KEY校验错误"));
 					dlg->ShowInfo(_T("退出BootLoader"),0);
-				}*/
+				}
+#endif
 				dlg->ShowInfo(_T("校验通过"),0);
 				exitSign = TRUE;
 				break;
@@ -1633,7 +1683,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		//sendOrder(main_start);
 		if(!dlg->GenerateSendOrder(
 			ORDER_MAINSTART,
-			4,
+			0,
 			NULL,
 			dlg->fileToWrite->GetMainStartAddr()))
 			return -1;
