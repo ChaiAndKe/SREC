@@ -1373,13 +1373,13 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			{
 			case KEY_OK:
 				//上位机判断校验是否匹配
-				l_key = CalculateKey(dlg->receiceData->random);
+				/*l_key = CalculateKey(dlg->receiceData->random);
 				if (l_key != dlg->receiceData->returnData)
 				{
 					//KEY校验未通过，退出
 					dlg->ShowErrMessageBox(_T("KEY校验错误"));
 					dlg->ShowInfo(_T("退出BootLoader"),0);
-				}
+				}*/
 				dlg->ShowInfo(_T("校验通过"),0);
 				exitSign = TRUE;
 				break;
