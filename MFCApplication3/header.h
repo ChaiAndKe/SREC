@@ -166,6 +166,7 @@ public:
 		memset(allData,0x00,totalLength*sizeof(UCHAR));
 	}
 public:
+	/*
 	UCHAR GetCheck()
 	{
 		UCHAR l_check = 0;
@@ -174,11 +175,11 @@ public:
 			l_check += allData[i];
 		}
 		return l_check;
-	}
+	}*/
 	UCHAR CalculateCheck()
 	{
 		UCHAR l_check = 0;
-		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
+		for (UCHAR i=1;i<totalLength-1;i++)
 		{
 			l_check += allData[i];
 		}
