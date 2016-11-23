@@ -5,6 +5,9 @@
 #define _TEST
 #endif
 
+#define _MONITOR
+#define _SIMULATOR
+
 #ifdef __cplusplus
 
 //文件读取错误信息
