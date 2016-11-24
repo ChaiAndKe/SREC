@@ -42,7 +42,7 @@ public:
 	
 public:
 	//È«¾Öº¯Êý
-	void ShowInfo(CString str, int code=0);
+	void ShowInfo(CString str, int index = -1);
 	void ShowErrMessageBox(CString err);
 	BOOL GenerateSendOrder(char order,UCHAR len,const UCHAR *d,UINT addr=0);
 
