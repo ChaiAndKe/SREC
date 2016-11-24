@@ -179,10 +179,19 @@ public:
 		}
 		return l_check;
 	}*/
-	UCHAR CalculateCheck()
+	UCHAR Calculate_7BitCheck()
 	{
 		UCHAR l_check = 0;
 		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}
+	UCHAR Calculate_23BitCheck()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
 		{
 			l_check += allData[i];
 		}
@@ -231,7 +240,7 @@ public:
 		allData[5] = data>>16;
 		allData[6] = data>>24;
 
-		allData[7] = CalculateCheck();
+		allData[7] = Calculate_7BitCheck();
 		
 		return TRUE;
 	}
@@ -270,7 +279,7 @@ public:
 		allData[2] = length;
 		this->dataLength = length;
 
-		allData[totalLength-1] = CalculateCheck();
+		allData[totalLength-1] = Calculate_23BitCheck();
 		return TRUE;
 	}
 };

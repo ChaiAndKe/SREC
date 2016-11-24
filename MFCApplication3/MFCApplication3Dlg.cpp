@@ -879,7 +879,7 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 				else if((frameinfo[i].ID == MSGID_FRAMEREV) && (frameinfo[i].DataLen == 8))//接收正确的帧ID
 				{
 					dlg->receiceData->SetAllData((const char *)(frameinfo[i].Data), 8);
-					if((dlg->receiceData->CalculateCheck() == frameinfo[i].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
+					if((dlg->receiceData->Calculate_7BitCheck() == frameinfo[i].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
 					{
 						dlg->receiceData->startSign = frameinfo[i].Data[0];
 						dlg->receiceData->returnValue = frameinfo[i].Data[1];
