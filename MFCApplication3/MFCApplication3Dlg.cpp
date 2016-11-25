@@ -1523,6 +1523,65 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		return DATA_ERR;
 	}
 
+	//3.发送erase
+	if (((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())
+	{
+		i = 0;
+		exitSign = FALSE;
+		do
+		{
+			i++;
+			//sendOrder(erase);
+			if(!dlg->GenerateSendOrder(ORDER_ERASE,0,NULL))
+				return -1;
+			dlg->SendOrder(dlg->sendData2);
+			if (WaitForSingleObject(dlg->receiveEvent,ACK_TIMEOUT)==WAIT_OBJECT_0)
+			{
+				//收到数据，判断数据是否正确
+				switch(dlg->receiceData->returnValue)
+				{
+				case ERASE_OK:
+					exitSign = TRUE;
+					dlg->ShowInfo(_T("擦除完成"));
+					break;
+				case ERASE_NOTOK:
+					dlg->ShowErrMessageBox(_T("擦除flash失败"));
+					dlg->ShowInfo(_T("退出BootLoader"));
+					return ERASE_NOTOK;
+					break;
+				case DATA_ERR:
+					dlg->ShowInfo(_T("ERASE命令校验错误，重新发送"));
+					exitSign = FALSE;
+					break;
+				default:
+					dlg->ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
+					break;
+				}
+			}
+			else
+			{
+				//超时，提示并退出
+	#ifdef _TEST
+				exitSign = TRUE;
+	#else
+				dlg->ShowErrMessageBox(_T("连接失败"));
+				return -1;
+	#endif
+			}
+
+		} while (i<10 && !exitSign);
+
+		if (i==10&&exitSign==FALSE)
+		{
+			//连接不稳定，退出
+			dlg->ShowErrMessageBox(_T("连接不稳定，擦除命令发送失败"));
+			dlg->ShowInfo(_T("连接不稳定，终止发送"));
+			dlg->ShowInfo(_T("退出BootLoader"));
+			return DATA_ERR;
+		}
+	}
+
 	//3.发送PROGRAM
 	CString tmp;
 	int a=FILE_READ_NORMAL;
