@@ -66,7 +66,7 @@ const int _100KBPS = 4;
 const UINT MSGID_FARME1 = 1;
 const UINT MSGID_FARME2[3] = {1, 2, 3};
 const UINT MSGID_FRAMEREV = 0;
-const DWORD ACK_TIMEOUT = 1000;//等下位机回令超时阈值
+const DWORD ACK_TIMEOUT = 6000;//等下位机回令超时阈值
 
 //CAN错误定义
 const int CAN_CONNECT_OK = 0;
