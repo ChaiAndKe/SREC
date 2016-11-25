@@ -138,7 +138,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 		hDlg,			//父窗口句柄
 		IDS_STATUS);	// 预定义的资源ID，相当于状态栏的ID号：GetDlgItem(IDS_STATUS)
 	
-	int pint[2] = { 350,-1 };
+	int pint[2] = { 300,-1 };
 	//状态栏第一个方格右边界离窗口客户区左边界的距离为100
 	//第二个方格右边界离窗口客户区左边界的距离为200
 	//...以此类推
