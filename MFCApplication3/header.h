@@ -67,6 +67,7 @@ const UINT MSGID_FARME1 = 1;
 const UINT MSGID_FARME2[3] = {1, 2, 3};
 const UINT MSGID_FRAMEREV = 0;
 const DWORD ACK_TIMEOUT = 6000;//等下位机回令超时阈值
+const UINT RETRY_TIMES = 3;//重试次数
 
 //CAN错误定义
 const int CAN_CONNECT_OK = 0;
@@ -259,10 +260,16 @@ public:
 
 		allData[0] = '$';
 		allData[1] = command;
+		/*//little endian
 		allData[3] = addr;
 		allData[4] = addr>>8;
 		allData[5] = addr>>16;
-		allData[6] = addr>>24;
+		allData[6] = addr>>24;*/
+		//big endian
+		allData[3] = addr>>24;
+		allData[4] = addr>>16;
+		allData[5] = addr>>8;
+		allData[6] = addr;
 
 		for (UCHAR i=0;i<length;i++)
 		{
