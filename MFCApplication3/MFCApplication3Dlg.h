@@ -6,6 +6,7 @@
 #include "header.h"
 #include "testlistbox.h"
 #include "AnalysisFile.h"
+#include "afxcmn.h"
 
 // CMFCApplication3Dlg 对话框
 class CMFCApplication3Dlg : public CDialogEx
@@ -43,6 +44,7 @@ public:
 public:
 	//全局函数
 	void ShowInfo(CString str, int index = -1);
+	void ShowProgress();
 	void ShowErrMessageBox(CString err);
 	BOOL GenerateSendOrder(char order,UCHAR len,const UCHAR *d,UINT addr=0);
 
@@ -83,6 +85,8 @@ public:
 public:
 	//status bar
 	HWND hStatusWindow;
+	CStatusBar m_StatusBar;
+	CProgressCtrl m_ProgressState;
 
 public:
 	afx_msg void OnMenuExit();

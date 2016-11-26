@@ -63,6 +63,7 @@ void CMFCApplication3Dlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_INFO, m_ListInfo);
+	DDX_Control(pDX, IDC_PROGRESS1, m_ProgressState);
 }
 
 BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
@@ -133,20 +134,31 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 
 	//设置状态栏
-	HWND hDlg = GetSafeHwnd();
-	hStatusWindow = CreateStatusWindow(WS_CHILD | WS_VISIBLE | WS_BORDER,
-		TEXT("就绪"),	//显示在状态栏上的信息
-		hDlg,			//父窗口句柄
-		IDS_STATUS);	// 预定义的资源ID，相当于状态栏的ID号：GetDlgItem(IDS_STATUS)
+
+
+	UINT arr[3] = {13597461,13597462,13597463};
+	m_StatusBar.Create(this);
+	m_StatusBar.SetIndicators(arr,sizeof(arr)/sizeof(UINT));
+	CRect rect;
+	GetClientRect(rect);
 	
-	int pint[2] = { 300,-1 };
-	//状态栏第一个方格右边界离窗口客户区左边界的距离为100
-	//第二个方格右边界离窗口客户区左边界的距离为200
-	//...以此类推
-	//-1表示该方格的右边界为为窗口客户区的右边界
-	::SendMessage(hStatusWindow, SB_SETPARTS, 2, (LPARAM)pint);
-	::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN未连接"));
-	::SendMessage(hStatusWindow, SB_SETTEXT, 1, (LPARAM)TEXT("下载 0%"));
+	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
+	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
+
+	m_StatusBar.SetPaneInfo(1,arr[1],0,75);
+	m_StatusBar.SetPaneText(1,_T("下载0%"));
+
+	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
+	RepositionBars(AFX_IDW_CONTROLBAR_FIRST,
+		AFX_IDW_CONTROLBAR_LAST,
+		0);
+	RECT l_rect;
+	m_StatusBar.GetItemRect(2,&l_rect);
+	m_ProgressState.SetParent(&m_StatusBar);
+	m_ProgressState.MoveWindow(&l_rect);
+	m_ProgressState.ShowWindow(SW_SHOW);
+	m_ProgressState.SetRange(0,100);
+	m_ProgressState.SetPos(0);
 
 
 
@@ -293,7 +305,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 		((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(FALSE);
 		((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("连接CAN"));
 
-		::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已断开"));
+		m_StatusBar.SetPaneText(0,_T("CAN已断开"));
 
 		//设置m_Connect为FALSE即已经关闭ReceiveThread线程
 		
@@ -312,12 +324,12 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 
 			AfxBeginThread(ReceiveThread,this);
 			//set the status bar
-			::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已连接"));
+			m_StatusBar.SetPaneText(0,_T("CAN已连接"));
 			break;
 
 		default:
 			//未知错误
-			::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN 未知错误"));
+			m_StatusBar.SetPaneText(0,_T("CAN未知错误"));
 			break;
 		}
 	}
@@ -735,6 +747,15 @@ int CMFCApplication3Dlg::DisConnectCan()
 		VCI_CloseDevice(m_devtype,m_devind);
 	}
 	return CAN_DISCONNECT_OK;
+}
+void CMFCApplication3Dlg::ShowProgress()
+{
+	CString tmp;
+	tmp.Format(_T("下载 %d"),fileToWrite->GetSendedPercent());
+	tmp+="%";
+	//						::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+	m_StatusBar.SetPaneText(1,tmp);
+	m_ProgressState.SetPos(fileToWrite->GetSendedPercent());
 }
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
 {
@@ -1631,9 +1652,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 					case PROGRAM_OK:
 						exitSign = TRUE;
 						
-						tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
-						tmp+="%";
-						::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+						dlg->ShowProgress();
 #ifndef _MONITOR
 						if(frameNum % 4 == 0) tmp = "正在烧写.";
 						else if(frameNum % 4 == 1) tmp = "正在烧写..";
@@ -1686,9 +1705,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			break;
 		case FILE_READ_END:
 			//文件结束
-			tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
-			tmp+="%";
-			::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+			dlg->ShowProgress();
 
 			//dlg->ShowInfo(_T("读取结束"));
 			dlg->ShowInfo(_T("烧写完成"));
