@@ -6,7 +6,7 @@
 #endif
 
 #define _MONITOR
-//#define _SIMULATOR
+#define _SIMULATOR
 
 #ifdef __cplusplus
 
@@ -40,7 +40,11 @@ const UCHAR GETVERSION_OK = 0X06;
 const UCHAR GETVERSION_NOTOK = 0X66;
 const UCHAR BOOTEND_OK = 0X07;
 const UCHAR BOOTEND_NOTOK = 0X77;
-
+const UCHAR PROGDATA_OK = 0X08;
+const UCHAR PROGDATA_NOTOK = 0X88;
+const UCHAR SPERASE_OK = 0x09;
+const UCHAR SPERASE_NOTOK = 0x99;
+const UCHAR ADDRALIGN_ERR = 0x0A;
 //上位机到下位机的帧命令定义
 const UCHAR ORDER_BOOT = 'B';
 const UCHAR ORDER_KEY = 'K';
@@ -49,6 +53,8 @@ const UCHAR ORDER_PROGRAM = 'P';
 const UCHAR ORDER_GETVERSION = 'G';
 const UCHAR ORDER_MAINSTART = 'M';
 const UCHAR ORDER_BOOTEND = 'o';
+const UCHAR ORDER_PROGDATA = 'D';
+const UCHAR ORDER_SPERASE = 'e';
 
 //CAN连接参数定义
 const int USBCAN_II = 0;
