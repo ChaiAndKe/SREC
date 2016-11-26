@@ -37,7 +37,7 @@ protected:
 public:
 	//待实现函数
 	int ConnectCan(int canType,int channel,int baudRate);
-	int DisConnectCan(int canType,int channel,int baudRate);
+	int DisConnectCan();
 	void SendOrder(const BaseType *d);
 	
 public:
@@ -71,6 +71,7 @@ public:
 	HANDLE exitEvent1;
 	HANDLE exitEvent2;
 
+
 	int m_startFromMain;//是否从main开始启动
 
 public:
@@ -95,5 +96,6 @@ public:
 	afx_msg void OnBnClickedRadioEraseandprogram();
 	afx_msg void OnCbnSelchangeComboEncryption();
 	afx_msg void OnBnClickedButtonTest();
+	afx_msg void OnClose();
 };
 

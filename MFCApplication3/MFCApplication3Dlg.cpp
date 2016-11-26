@@ -80,6 +80,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RADIO_ERASEANDPROGRAM, &CMFCApplication3Dlg::OnBnClickedRadioEraseandprogram)
 	ON_CBN_SELCHANGE(IDC_COMBO_ENCRYPTION, &CMFCApplication3Dlg::OnCbnSelchangeComboEncryption)
 	ON_BN_CLICKED(IDC_BUTTON_TEST, &CMFCApplication3Dlg::OnBnClickedButtonTest)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -183,8 +184,13 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
-
-
+/*
+void CMFCApplication3Dlg::OnClose()
+{
+	//CDialog::OnClose();
+	MessageBox(_T("就要关闭我了，好怕怕"),MB_OK);
+	
+}*/
 
 void CMFCApplication3Dlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
@@ -282,12 +288,15 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 	if (m_Connect)
 	{
 		//已连接，断开连接
-		returnCode = DisConnectCan(a,b,c);
+		returnCode = DisConnectCan();
 		m_Connect = FALSE;
 		((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(FALSE);
 		((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("连接CAN"));
 
 		::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已断开"));
+
+		//设置m_Connect为FALSE即已经关闭ReceiveThread线程
+		
 	}
 	else
 	{
@@ -529,12 +538,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		AfxBeginThread(SendThreadProgram,this);
 		//return;
 	}
+	/*
 	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
 	GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(FALSE);
 	GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(FALSE);
 	GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(FALSE);
-	GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(FALSE);
+	GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(FALSE);*/
 
 }
 
@@ -717,10 +727,13 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 	
 	return CAN_CONNECT_OK;
 }
-int CMFCApplication3Dlg::DisConnectCan(int canType,int channel,int baudRate)
+int CMFCApplication3Dlg::DisConnectCan()
 {
-	Sleep(500);//断开连接之前先休眠
-	VCI_CloseDevice(m_devtype,m_devind);
+	if(m_Connect)
+	{
+		Sleep(500);//断开连接之前先休眠
+		VCI_CloseDevice(m_devtype,m_devind);
+	}
 	return CAN_DISCONNECT_OK;
 }
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
@@ -1118,9 +1131,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 #endif
 		}
 		
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定，终止发送"));
@@ -1185,9 +1198,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1241,9 +1254,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定，擦除命令发送失败"));
@@ -1303,9 +1316,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1365,9 +1378,9 @@ UINT CMFCApplication3Dlg::SendThreadErase( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1443,9 +1456,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1512,9 +1525,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1524,7 +1537,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 	}
 
 	//3.发送erase
-	if (((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())
+	//if (((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())
 	{
 		i = 0;
 		exitSign = FALSE;
@@ -1570,9 +1583,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 	#endif
 			}
 
-		} while (i<10 && !exitSign);
+		} while (i<RETRY_TIMES && !exitSign);
 
-		if (i==10&&exitSign==FALSE)
+		if (i==RETRY_TIMES&&exitSign==FALSE)
 		{
 			//连接不稳定，退出
 			dlg->ShowErrMessageBox(_T("连接不稳定，擦除命令发送失败"));
@@ -1657,9 +1670,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 				}
 
-			} while (i<10 && !exitSign);
+			} while (i<RETRY_TIMES && !exitSign);
 
-			if (i==10&&exitSign==FALSE)
+			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
 				dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1734,9 +1747,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1793,9 +1806,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1861,9 +1874,9 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 #endif
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
+	if (i==RETRY_TIMES&&exitSign==FALSE)
 	{
 		//连接不稳定，退出
 		dlg->ShowErrMessageBox(_T("连接不稳定"));
@@ -1877,4 +1890,13 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 	dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(TRUE);
 	dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(TRUE);
 	return 0;
+}
+
+
+void CMFCApplication3Dlg::OnClose()
+{
+	// TODO:
+	//MessageBox(_T("就要关闭我了，好怕怕"),MB_OK);
+	DisConnectCan();
+	CDialogEx::OnClose();
 }
