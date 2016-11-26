@@ -161,7 +161,6 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	m_ProgressState.SetPos(0);
 
 
-
 	//设置默认值
 	((CComboBox*)GetDlgItem(IDC_COMBO_CANTYPE))->SetCurSel(0);
 	((CComboBox*)GetDlgItem(IDC_COMBO_CHANNEL))->SetCurSel(0);
@@ -170,7 +169,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->SetCurSel(0);
 	//0x00FE0000
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->SetWindowTextW(_T("0x00FE0000"));
-	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x"));
+	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x00FF0000"));
 //	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 	((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->SetCheck(TRUE);
 	//禁用地址
@@ -196,13 +195,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
-/*
-void CMFCApplication3Dlg::OnClose()
-{
-	//CDialog::OnClose();
-	MessageBox(_T("就要关闭我了，好怕怕"),MB_OK);
-	
-}*/
+
 
 void CMFCApplication3Dlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
@@ -753,8 +746,8 @@ void CMFCApplication3Dlg::ShowProgress()
 	CString tmp;
 	tmp.Format(_T("下载 %d"),fileToWrite->GetSendedPercent());
 	tmp+="%";
-	//						::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
-	m_StatusBar.SetPaneText(1,tmp);
+	::SendMessage(m_StatusBar.m_hWnd, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+	//m_StatusBar.SetPaneText(1,tmp);
 	m_ProgressState.SetPos(fileToWrite->GetSendedPercent());
 }
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
@@ -803,6 +796,12 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 		break;
 	case ORDER_PROGRAM:
 		sendData2->SetData(ORDER_PROGRAM,len,addr,d);
+		break;
+	case ORDER_PROGDATA:
+		sendData2->SetData(ORDER_PROGDATA,len,addr,d);
+		break;
+	case ORDER_SPERASE:
+		sendData2->SetData(ORDER_SPERASE,len,addr,d);
 		break;
 	}
 
@@ -1028,6 +1027,14 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 							{
 								dlg->receiceData->returnValue = BOOTEND_OK;
 							}
+							else if(FrameOrder == ORDER_PROGDATA)
+							{
+								dlg->receiceData->returnValue = PROGDATA_OK;
+							}
+							else if(FrameOrder == ORDER_SPERASE)
+							{
+								dlg->receiceData->returnValue = SPERASE_OK;
+							}
 							FrameOrder = 0;
 							FrameNum = 0;
 							FrameStart = FALSE;
@@ -1083,7 +1090,22 @@ UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 						//dlg->receiceData->returnValue = BOOTEND_OK;
 						//SetEvent(dlg->receiveEvent);//设置接收事件
 					}
-					
+					else if(ORDER_PROGDATA == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_PROGDATA;
+						//dlg->receiceData->returnValue = BOOTEND_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
+					else if(ORDER_SPERASE == frameinfo[i].Data[1])
+					{
+						FrameStart = TRUE;
+						FrameNum = 1;
+						FrameOrder = ORDER_SPERASE;
+						//dlg->receiceData->returnValue = BOOTEND_OK;
+						//SetEvent(dlg->receiveEvent);//设置接收事件
+					}
 				}
 			}
 #endif
@@ -1558,7 +1580,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 	}
 
 	//3.发送erase
-	//if (((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())
+	//if (((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck() )
 	{
 		i = 0;
 		exitSign = FALSE;
@@ -1566,18 +1588,28 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 		{
 			i++;
 			//sendOrder(erase);
-			if(!dlg->GenerateSendOrder(ORDER_ERASE,0,NULL))
-				return -1;
+			if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck())
+			{
+				if(!dlg->GenerateSendOrder(ORDER_ERASE,0,NULL))
+					return -1;
+			}
+			else
+			{
+				if(!dlg->GenerateSendOrder(ORDER_SPERASE,0,NULL))
+					return -1;
+			}
 			dlg->SendOrder(dlg->sendData2);
 			if (WaitForSingleObject(dlg->receiveEvent,ACK_TIMEOUT)==WAIT_OBJECT_0)
 			{
 				//收到数据，判断数据是否正确
 				switch(dlg->receiceData->returnValue)
 				{
+				case SPERASE_OK:
 				case ERASE_OK:
 					exitSign = TRUE;
 					dlg->ShowInfo(_T("擦除完成"));
 					break;
+				case SPERASE_NOTOK:
 				case ERASE_NOTOK:
 					dlg->ShowErrMessageBox(_T("擦除flash失败"));
 					dlg->ShowInfo(_T("退出BootLoader"));
@@ -1637,18 +1669,32 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 			{
 				i++;
 				//sendOrder(erase);
-				if(!dlg->GenerateSendOrder(
+				if(((CButton *)dlg->GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck())
+				{
+					if(!dlg->GenerateSendOrder(
+					ORDER_PROGDATA,
+					dlg->fileToWrite->GetDataSendLength(),
+					dlg->fileToWrite->GetDataSend(),
+					dlg->fileToWrite->GetDataSendAddr()))
+					return -1;
+				}
+				else
+				{
+					if(!dlg->GenerateSendOrder(
 					ORDER_PROGRAM,
 					dlg->fileToWrite->GetDataSendLength(),
 					dlg->fileToWrite->GetDataSend(),
 					dlg->fileToWrite->GetDataSendAddr()))
 					return -1;
+				}
+				
 				dlg->SendOrder(dlg->sendData2);
 				if (WaitForSingleObject(dlg->receiveEvent,ACK_TIMEOUT)==WAIT_OBJECT_0)
 				{
 					//收到数据，判断数据是否正确
 					switch(dlg->receiceData->returnValue)
 					{
+					case PROGDATA_OK:
 					case PROGRAM_OK:
 						exitSign = TRUE;
 						
@@ -1668,6 +1714,7 @@ UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
 						frameNum++;
 #endif
 						break;
+					case PROGDATA_NOTOK:
 					case PROGRAM_NOTOK:
 						exitSign = FALSE;
 						tmp.Format(_T("本帧数据烧写失败，正在第%d次重试"), i);
