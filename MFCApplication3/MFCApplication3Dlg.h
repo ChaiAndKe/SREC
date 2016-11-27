@@ -39,14 +39,16 @@ public:
 	//待实现函数
 	int ConnectCan(int canType,int channel,int baudRate);
 	int DisConnectCan();
-	void SendOrder(const BaseType *d);
+	int SendOrder(const BaseType *d);
+	int ReceiveOrder(UINT timeOutMilliSecond);
 	
 public:
 	//全局函数
 	void ShowInfo(CString str, int index = -1);
-	void ShowProgress();
+	void ShowProgress(int percent);
 	void ShowErrMessageBox(CString err);
 	BOOL GenerateSendOrder(char order,UCHAR len,const UCHAR *d,UINT addr=0);
+	
 
 private:
 	BOOL CStringToUINT(const CString &str,UINT& d,CString mess);//地址转换成UINT格式
@@ -73,6 +75,9 @@ public:
 	HANDLE exitEvent1;
 	HANDLE exitEvent2;
 
+	
+	UINT stateSendThread;//用于记录sendThread
+
 
 	int m_startFromMain;//是否从main开始启动
 
@@ -81,6 +86,7 @@ public:
 	static UINT ReceiveThread(void *param);
 	static UINT SendThreadErase(void *param);
 	static UINT SendThreadProgram(void *param);
+	static UINT SendThread( void *param );
 
 public:
 	//status bar
