@@ -5,8 +5,8 @@
 #define _TEST
 #endif
 
-#define _MONITOR
-#define _SIMULATOR
+//#define _MONITOR
+//#define _SIMULATOR
 
 #ifdef __cplusplus
 
@@ -72,7 +72,7 @@ const int _100KBPS = 4;
 const UINT MSGID_FARME1 = 1;
 const UINT MSGID_FARME2[3] = {1, 2, 3};
 const UINT MSGID_FRAMEREV = 0;
-const DWORD ACK_TIMEOUT = 6000;//等下位机回令超时阈值
+const DWORD ACK_TIMEOUT = 3000;//等下位机回令超时阈值
 const UINT RETRY_TIMES = 3;//重试次数
 
 //CAN错误定义
@@ -199,7 +199,7 @@ public:
 	UCHAR Calculate_23BitCheck()
 	{
 		UCHAR l_check = 0;
-		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
+		for (UCHAR i=1;i<totalLength-1;i++)
 		{
 			l_check += allData[i];
 		}
@@ -215,8 +215,9 @@ public:
 		{
 			allData[i]=d[i];
 		}
-		returnData = allData[3]|(allData[4]<<8)|(allData[5]<<16)|(allData[6]<<24);
 		/*
+		returnData = allData[3]|(allData[4]<<8)|(allData[5]<<16)|(allData[6]<<24);
+		
 		if (d[0]==0xA5)
 		{
 			returnValue = d[1];
@@ -243,10 +244,10 @@ public:
 		allData[0] = '$';
 		allData[1] = command;
 		allData[2] = length;
-		allData[3] = data;
-		allData[4] = data>>8;
-		allData[5] = data>>16;
-		allData[6] = data>>24;
+		allData[3] = data>>24;
+		allData[4] = data>>16;
+		allData[5] = data>>8;
+		allData[6] = data;
 
 		allData[7] = Calculate_7BitCheck();
 		
