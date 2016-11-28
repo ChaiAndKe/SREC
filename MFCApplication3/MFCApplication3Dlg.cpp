@@ -630,13 +630,11 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 	case 0:
 		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(TRUE);
-		((CCheckListBox*)GetDlgItem(IDC_CHECK_SKIPPROMPT))->EnableWindow(TRUE);
 		
 		break;
 	case 1:
 		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(FALSE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(FALSE);
-		((CCheckListBox*)GetDlgItem(IDC_CHECK_SKIPPROMPT))->EnableWindow(FALSE);
 		break;
 	}
 	
