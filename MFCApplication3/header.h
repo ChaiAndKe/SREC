@@ -5,8 +5,8 @@
 #define _TEST
 #endif
 
-//#define _MONITOR
-//#define _SIMULATOR
+#define _MONITOR
+#define _SIMULATOR
 
 #ifdef __cplusplus
 
@@ -26,7 +26,7 @@ const int FILE_ADDRESS_ERROR = 9;//行起始地址错误
 
 //通讯命令定义
 const UCHAR PASSWORD_OK = 0X01;
-const UCHAR PASSRORD_NOTOK = 0X11;
+const UCHAR PASSWORD_NOTOK = 0X11;
 const UCHAR KEY_OK = 0X02;
 const UCHAR KEY_NOTOK = 0X22;
 const UCHAR ERASE_OK = 0X03;
@@ -187,6 +187,15 @@ public:
 		}
 		return l_check;
 	}*/
+	UCHAR Calculate_Check()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}
 	UCHAR Calculate_7BitCheck()
 	{
 		UCHAR l_check = 0;

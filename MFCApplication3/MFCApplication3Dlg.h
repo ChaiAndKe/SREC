@@ -36,11 +36,21 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-	//待实现函数
 	int ConnectCan(int canType,int channel,int baudRate);
 	int DisConnectCan();
-	int SendOrder(const BaseType *d);
-	int ReceiveOrder(UINT timeOutMilliSecond);
+	BOOL SendOrder(const BaseType *d);
+	BOOL ReceiveOrderInMs(UINT timeOut);
+
+public:
+	BOOL OrderBoot();
+	BOOL OrderKey();
+	BOOL OrderErase();//for Erase
+	BOOL OrderSPErase();//for erase
+	BOOL OrderProgram();
+	BOOL OrderProgData();
+	BOOL OrderBootEnd();
+	BOOL OrderGetVersion();
+	BOOL OrderMainStart();
 	
 public:
 	//全局函数
