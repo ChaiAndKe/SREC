@@ -939,24 +939,6 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			if(3 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 3))//发送成功
 			{
 					//do nothing
-#ifdef _MONITOR
-					CString str,tmpstr;
-					
-					str = "";
-					tmpstr.Format(_T("发送帧ID:%08x "),canframe[0].ID);
-					str += tmpstr;
-					tmpstr = " 数据：";
-					str += tmpstr;
-					for(int j = 0; j < canframe[0].DataLen; j++)
-					{
-						tmpstr.Format(_T("%02x "),canframe[0].Data[j]);
-						str += tmpstr;
-					}
-					//tmpstr.Format(_T("时间标识:%08x "),canframe.TimeStamp);
-					//str+=tmpstr;
-					ShowInfo(str);
-					
-#endif
 			}
 			else
 			{
@@ -1053,7 +1035,7 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 				}		
 			}
 		}
-#if (defined _MONITOR) && (!(defined _SIMULATOR))
+#if (defined _MONITOR) //&& (!(defined _SIMULATOR))
 		{
 			CString str,tmpstr;
 			for(i = 0; i < len; i++)
