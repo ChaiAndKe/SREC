@@ -145,7 +145,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
 	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
 
-	m_StatusBar.SetPaneInfo(1,arr[1],0,75);
+	m_StatusBar.SetPaneInfo(1,arr[1],0,50);
 	m_StatusBar.SetPaneText(1,_T("下载0%"));
 
 	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
@@ -454,42 +454,45 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件
-	if (filePathName.IsEmpty())
+	if(!((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())
 	{
-		AfxMessageBox(_T("请选择SREC文件"));
-		return;
-	}else
-	{
-		if (NULL!=fileToWrite)
+		if (filePathName.IsEmpty())
 		{
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite=NULL;
-		}
-		if (NULL==fileToWrite)
-		{
-			fileToWrite = new CAnalysisFile(filePathName);
-		}
-		if (NULL==fileToWrite)
-		{
-			AfxMessageBox(_T("文件打开失败，请重试！"));
-			//ShowInfo(_T("文件打开失败，请重试！"));
-			//ShowInfo(_T("退出BootLoader"));
+			AfxMessageBox(_T("请选择SREC文件"));
 			return;
-		}
-		/*
-		else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+		}else
 		{
-			AfxMessageBox(_T("文件格式错误，请检查！"));
-			ShowInfo(_T("文件格式错误，请检查！"));
-			ShowInfo(_T("退出BootLoader"));
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite = NULL;
-			return;
-		}*/
-		fileToWrite->SeekToBegin();
-		ShowInfo(_T("文件打开成功！"));
+			if (NULL!=fileToWrite)
+			{
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite=NULL;
+			}
+			if (NULL==fileToWrite)
+			{
+				fileToWrite = new CAnalysisFile(filePathName);
+			}
+			if (NULL==fileToWrite)
+			{
+				AfxMessageBox(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("退出BootLoader"));
+				return;
+			}
+			/*
+			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+			{
+				AfxMessageBox(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("退出BootLoader"));
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite = NULL;
+				return;
+			}*/
+			fileToWrite->SeekToBegin();
+			ShowInfo(_T("文件打开成功！"));
+		}
 	}
 
 	//step3.获取操作模式
