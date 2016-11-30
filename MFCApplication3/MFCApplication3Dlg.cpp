@@ -120,7 +120,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 #ifdef _DEBUG
 	SetWindowText(_T("MPC5744P BootLoader通信_DEBUG_MODE"));
-	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
+	((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x00000000"));
 #else
 	SetWindowText(_T("MPC5744P BootLoader通信"));
@@ -145,7 +145,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
 	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
 
-	m_StatusBar.SetPaneInfo(1,arr[1],0,75);
+	m_StatusBar.SetPaneInfo(1,arr[1],0,50);
 	m_StatusBar.SetPaneText(1,_T("下载0%"));
 
 	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
@@ -253,7 +253,7 @@ HCURSOR CMFCApplication3Dlg::OnQueryDragIcon()
 void CMFCApplication3Dlg::OnBnClickedButtonTest()
 {
 	// DEBUG模式下有效，否则隐藏
-
+	OnBnClickedButtonStartbootloader();
 #if 1
 	UCHAR a,b,c;
 	a = 0;
@@ -452,58 +452,81 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件
-	if (filePathName.IsEmpty())
+	if(!((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())
 	{
-		AfxMessageBox(_T("请选择SREC文件"));
-		return;
-	}else
-	{
-		if (NULL!=fileToWrite)
+		if (filePathName.IsEmpty())
 		{
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite=NULL;
-		}
-		if (NULL==fileToWrite)
-		{
-			fileToWrite = new CAnalysisFile(filePathName);
-		}
-		if (NULL==fileToWrite)
-		{
-			AfxMessageBox(_T("文件打开失败，请重试！"));
-			//ShowInfo(_T("文件打开失败，请重试！"));
-			//ShowInfo(_T("退出BootLoader"));
+			AfxMessageBox(_T("请选择SREC文件"));
 			return;
-		}
-		/*
-		else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+		}else
 		{
-			AfxMessageBox(_T("文件格式错误，请检查！"));
-			ShowInfo(_T("文件格式错误，请检查！"));
-			ShowInfo(_T("退出BootLoader"));
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite = NULL;
-			return;
-		}*/
-		fileToWrite->SeekToBegin();
-		ShowInfo(_T("文件打开成功！"));
+			if (NULL!=fileToWrite)
+			{
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite=NULL;
+			}
+			if (NULL==fileToWrite)
+			{
+				fileToWrite = new CAnalysisFile(filePathName);
+			}
+			if (NULL==fileToWrite)
+			{
+				AfxMessageBox(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("退出BootLoader"));
+				return;
+			}
+			/*
+			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+			{
+				AfxMessageBox(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("退出BootLoader"));
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite = NULL;
+				return;
+			}*/
+			fileToWrite->SeekToBegin();
+			ShowInfo(_T("文件打开成功！"));
+		}
 	}
 
 	//step3.获取操作模式
+	//读取INI配置文件
+	CString AppName,startAddr,endAddr;
+	CString path = _T(".//config.ini");
+	CFileFind finder;
 
 	int l_writeData = ((CButton *)GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck();
 	int l_erase = ((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck();
 	int l_program = ((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck();
 	m_startFromMain = ((CButton *)GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck();
-	if (1==l_writeData)
+	if (1==l_writeData || 1==l_program)
 	{
-		//只写数据
 		CString str;
-		((CEdit *)GetDlgItem(IDC_EDIT_STARTADDRESS))->GetWindowTextW(str);
-		if(!CStringToUINT(str,startAddress,_T("地址")))
+		if (!finder.FindFile(_T(".//config.ini")))
 		{
+			AfxMessageBox(_T("未找到配置文件"));
 			return;
+		}
+		else
+		{
+			if(1==l_writeData)
+				AppName = _T("WriteData");
+			else 	if(1==l_program)
+				AppName = _T("Program");
+
+			startAddr = _T("StartAddr");
+			endAddr = _T("EndAddr");
+			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,0,path);
+			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,0,path);
+			if (stopAddress==0||startAddress==0)
+			{
+				AfxMessageBox(_T("地址读取错误，请检查"));
+				return;
+			}
 		}
 
 		if (startAddress%8!=0)
@@ -513,13 +536,11 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			ShowInfo(_T("退出BootLoader"));
 			return;
 		}
+	}
 
-		((CEdit *)GetDlgItem(IDC_EDIT_ENDADDRESS))->GetWindowTextW(str);
-		if(!CStringToUINT(str,stopAddress,_T("地址")))
-		{
-			return;
-		}
-
+	if (1==l_writeData)
+	{
+		//只写数据
 		if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
 		{
 			AfxMessageBox(_T("地址设置错误，请重试！"));
