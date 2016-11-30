@@ -193,7 +193,6 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	startAddress = 0;
 	stopAddress  = 0;
 
-	stateSendThread = 0;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -489,7 +488,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 				return;
 			}*/
 			fileToWrite->SeekToBegin();
-			ShowInfo(_T("文件打开成功！"));
+			//ShowInfo(_T("文件打开成功！"));
 		}
 	}
 
@@ -522,20 +521,20 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			endAddr = _T("EndAddr");
 			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,0,path);
 			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,0,path);
-			if (stopAddress==0||startAddress==0)
+			/*if (stopAddress==0||startAddress==0)
 			{
 				AfxMessageBox(_T("地址读取错误，请检查"));
 				return;
-			}
+			}*/
 		}
-
+		/*
 		if (startAddress%8!=0)
 		{
 			AfxMessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"));
 			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
 			ShowInfo(_T("退出BootLoader"));
 			return;
-		}
+		}*/
 	}
 
 	if (1==l_writeData)
@@ -875,8 +874,10 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 		{
 			canframe[0].ID = MSGID_FARME1;//帧格式1 ID
 			memcpy(canframe[0].Data, sendframe->allData, 8);
+			isTransmitOK = FALSE;
 			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 1))//发送成功
 			{
+				isTransmitOK = TRUE;
 /*
 #ifdef _MONITOR
 				CString str,tmpstr;
@@ -898,6 +899,7 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			{
 				//TODO：发送失败
 				ShowInfo(_T("CAN发送失败"));
+				isTransmitOK = FALSE;
 			}
 		}
 	}
@@ -952,15 +954,17 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			memcpy(canframe[1].Data, &(sendframe->allData[1*8]), 8);
 			memcpy(canframe[2].Data, &(sendframe->allData[2*8]), 8);
 			
-			
+			isTransmitOK = FALSE;
 			if(3 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 3))//发送成功
 			{
-					//do nothing
+				//do nothing
+				isTransmitOK = TRUE;
 			}
 			else
 			{
 				//TODO：一次发送失败，跳出 or 重试 is a question
 				ShowInfo(_T("CAN发送失败"));
+				isTransmitOK = FALSE;
 			}
 			//CANReceive();
 			
@@ -979,10 +983,12 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	long startTick = 0;
 	long endTick = 0;
 	UINT waitTick = 0;
+	/*
 #ifdef _SIMULATOR
-	Sleep(100);
-#endif
+	Sleep(1);
+#endif*/
 
+	while(isTransmitOK != TRUE);
 	if(FALSE == m_Connect)
 	{
 		return FALSE;
@@ -3024,8 +3030,6 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		}
 	}		
 
-		
-		//dlg->ShowInfo(_T("BootLoader完成"));
 	dlg->GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(TRUE);
 	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
 	dlg->GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(TRUE);

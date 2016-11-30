@@ -84,9 +84,8 @@ public:
 	HANDLE receiveEvent;
 	HANDLE exitEvent1;
 	HANDLE exitEvent2;
-
 	
-	UINT stateSendThread;//用于记录sendThread
+	BOOL isTransmitOK;
 
 
 	int m_startFromMain;//是否从main开始启动
