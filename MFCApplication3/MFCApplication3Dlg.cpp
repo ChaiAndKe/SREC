@@ -316,8 +316,6 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 			m_Connect = TRUE;
 			((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(TRUE);
 			((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("断开CAN"));
-
-			//AfxBeginThread(ReceiveThread,this);
 			//set the status bar
 			m_StatusBar.SetPaneText(0,_T("CAN已连接"));
 			break;
@@ -858,7 +856,7 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			memcpy(canframe[0].Data, sendframe->allData, 8);
 			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 1))//发送成功
 			{
-				//CANReceive();
+/*
 #ifdef _MONITOR
 				CString str,tmpstr;
 	
@@ -873,7 +871,7 @@ int CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 					str += tmpstr;
 				}
 				ShowInfo(str);
-#endif
+#endif*/
 			}
 			else
 			{
@@ -960,12 +958,15 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	long startTick = 0;
 	long endTick = 0;
 	UINT waitTick = 0;
-	
+#ifdef _SIMULATOR
+	Sleep(100);
+#endif
+
 	if(FALSE == m_Connect)
 	{
 		return FALSE;
 	}
-	startTick = GetTickCount();
+	//startTick = GetTickCount();
 
 	while(waitTick < timeOut)//读CAN缓冲区超时判断
 	{
@@ -1000,8 +1001,10 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 		VCI_ReadErrInfo(m_devtype, m_devind, m_cannum, &errinfo);
 		return FALSE;
 	}
+
 	else
 	{
+#ifndef _SIMULATOR
 		for(i = 0; i < len; i++)
 		{
 			if(frameinfo[i].RemoteFlag != 0)
@@ -1033,6 +1036,10 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 				}		
 			}
 		}
+
+		return TRUE;
+#endif
+	}
 #if (defined _MONITOR) //&& (!(defined _SIMULATOR))
 		{
 			CString str,tmpstr;
@@ -1068,46 +1075,75 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 					if(FrameOrder == ORDER_PROGRAM)
 					{
 						receiceData->returnValue = PROGRAM_OK;
-						Sleep(20);
+						//Sleep(20);
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_ERASE)
 					{
 						receiceData->returnValue = ERASE_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_GETVERSION)
 					{
 						receiceData->returnValue = GETVERSION_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_MAINSTART)
 					{
 						receiceData->returnValue = MAINSTART_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_BOOTEND)
 					{
 						receiceData->returnValue = BOOTEND_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_PROGDATA)
 					{
 						receiceData->returnValue = PROGDATA_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
 					else if(FrameOrder == ORDER_SPERASE)
 					{
 						receiceData->returnValue = SPERASE_OK;
+						FrameOrder = 0;
+						FrameNum = 0;
+						FrameStart = FALSE;
+						return TRUE;
 					}
-					FrameOrder = 0;
-					FrameNum = 0;
-					FrameStart = FALSE;
+					
+					
 					//SetEvent(receiveEvent);//设置接收事件
 				}
 			}
 			if(ORDER_BOOT == frameinfo[i].Data[1])
 			{
 				receiceData->returnValue = PASSWORD_OK;
+				return TRUE;
 				//SetEvent(dlg->receiveEvent);//设置接收事件
 			}
 			else if(ORDER_KEY == frameinfo[i].Data[1])
 			{
 				receiceData->returnValue = KEY_OK;
+				return TRUE;
 				//SetEvent(receiveEvent);//设置接收事件
 			}
 			else if(ORDER_ERASE == frameinfo[i].Data[1])
@@ -1167,9 +1203,6 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 			}
 		}
 #endif	
-		
-	return TRUE;
-	}
 }
 UINT CMFCApplication3Dlg::ReceiveThread( void *param )
 {
@@ -2536,6 +2569,7 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 					switch(receiceData->returnValue)
 					{
 						case PROGRAM_OK:
+							exitSign = TRUE;
 							ShowProgress(fileToWrite->GetSendedPercent());
 #ifndef _MONITOR
 							/*
@@ -2634,6 +2668,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 					switch(receiceData->returnValue)
 					{
 						case PROGDATA_OK:
+							exitSign = TRUE;
 							ShowProgress(fileToWrite->GetSendedPercent());
 #ifndef _MONITOR
 							/*
@@ -2886,7 +2921,7 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 
 	tickStart = GetTickCount();
 
-	memset(orderList, 0, sizeof(orderList)/sizeof(UCHAR));
+	memset(orderList, 0, sizeof(orderList)*sizeof(UCHAR));
 
 	if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck())//擦除并编程
 	{
@@ -2979,7 +3014,7 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 
 	//记录烧写时间
 	tickEnd = GetTickCount();
-	str.Format(_T("time:%dms"),tickEnd-tickStart);
+	str.Format(_T("烧写共用时间: %.3fs"),(tickEnd-tickStart)/1000.0);
 	dlg->ShowInfo(str);
 	//关闭打开的文件
 	if (NULL!=dlg->fileToWrite)
