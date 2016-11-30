@@ -495,7 +495,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//step3.获取操作模式
 	//读取INI配置文件
 	CString AppName,startAddr,endAddr;
-	CString path = _T(".//config.ini");
+	CString path = _T(".//bootcfg.ini");
 	CFileFind finder;
 
 	int l_writeData = ((CButton *)GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck();
@@ -505,7 +505,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	if (1==l_writeData || 1==l_program)
 	{
 		CString str;
-		if (!finder.FindFile(_T(".//config.ini")))
+		if (!finder.FindFile(path))
 		{
 			AfxMessageBox(_T("未找到配置文件"));
 			return;
@@ -513,12 +513,12 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		else
 		{
 			if(1==l_writeData)
-				AppName = _T("WriteData");
-			else 	if(1==l_program)
-				AppName = _T("Program");
+				AppName = _T("DataSegment");
+			else if(1==l_program)
+				AppName = _T("CodeSegment");
 
-			startAddr = _T("StartAddr");
-			endAddr = _T("EndAddr");
+			startAddr = _T("startAddr");
+			endAddr = _T("endAddr");
 			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,0,path);
 			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,0,path);
 			/*if (stopAddress==0||startAddress==0)
