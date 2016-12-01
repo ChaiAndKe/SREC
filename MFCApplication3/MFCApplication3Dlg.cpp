@@ -535,39 +535,18 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			ShowInfo(_T("退出BootLoader"));
 			return;
 		}*/
-	}
-
-	if (1==l_writeData)
-	{
-		//只写数据
+		//设置边界
 		if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
-		{
-			AfxMessageBox(_T("地址设置错误，请重试！"));
-			return;
-		}
-		//启动线程
-		AfxBeginThread(SendThread,this);
-		//return;
-	}else if (1==l_erase)
-	{
-		//擦除
-		//启动线程
-		AfxBeginThread(SendThread,this);
-		//return;
-	}else if (1==l_program)
-	{
-		//编程
-		if (!fileToWrite->SetArrange(TRUE))
 		{
 			AfxMessageBox(_T("地址设置错误，请重试！"));
 			return;
 		}
 		ShowProgress(0);
 		m_ListInfo.ResetContent();
-		//AfxBeginThread(SendThreadProgram,this);
-		AfxBeginThread(SendThread,this);
-		//return;
 	}
+
+	//启动线程
+	AfxBeginThread(SendThread,this);
 	/*
 	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
