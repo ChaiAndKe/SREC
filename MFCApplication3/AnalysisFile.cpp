@@ -334,7 +334,7 @@ UINT CAnalysisFile::GetMainStartAddr()
 }
 UCHAR CAnalysisFile::GetSendedPercent()
 {
-	if (sendAllData)
+	if (dataToSendStopAddr-dataToSendStartAddr+1 == 0)
 	{
 		sendedPercent =(UCHAR)(GetPosition()*100/fileLength);
 	}

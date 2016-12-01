@@ -145,7 +145,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
 	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
 
-	m_StatusBar.SetPaneInfo(1,arr[1],0,50);
+	m_StatusBar.SetPaneInfo(1,arr[1],0,60);
 	m_StatusBar.SetPaneText(1,_T("下载0%"));
 
 	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
