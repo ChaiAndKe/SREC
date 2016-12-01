@@ -519,13 +519,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 
 			startAddr = _T("startAddr");
 			endAddr = _T("endAddr");
-			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,0,path);
-			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,0,path);
-			/*if (stopAddress==0||startAddress==0)
+			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,1,path);
+			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,1,path);
+			if (stopAddress==1||startAddress==1)
 			{
 				AfxMessageBox(_T("地址读取错误，请检查"));
 				return;
-			}*/
+			}
 		}
 		/*
 		if (startAddress%8!=0)
