@@ -86,6 +86,7 @@ public:
 	//HANDLE exitEvent2;
 	
 	volatile BOOL isTransmitOK;
+	DWORD canFrameCount;
 
 
 	int m_startFromMain;//是否从main开始启动
