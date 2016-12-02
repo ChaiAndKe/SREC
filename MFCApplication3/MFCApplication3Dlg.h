@@ -87,7 +87,7 @@ public:
 	
 	volatile BOOL isTransmitOK;
 	DWORD canFrameCount;
-
+	UCHAR sendThreadState;
 
 	int m_startFromMain;//是否从main开始启动
 
