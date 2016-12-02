@@ -1256,7 +1256,6 @@ BOOL CMFCApplication3Dlg::OrderKey()
 					ShowInfo(strListInfo);
 					exitSign = FALSE;
 				break;
-
 				default:
 					ShowInfo(_T("未定义的返回值"));
 					exitSign = FALSE;
