@@ -63,6 +63,7 @@ void CMFCApplication3Dlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_INFO, m_ListInfo);
+	DDX_Control(pDX, IDC_PROGRESS1, m_ProgressState);
 }
 
 BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
@@ -80,6 +81,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RADIO_ERASEANDPROGRAM, &CMFCApplication3Dlg::OnBnClickedRadioEraseandprogram)
 	ON_CBN_SELCHANGE(IDC_COMBO_ENCRYPTION, &CMFCApplication3Dlg::OnCbnSelchangeComboEncryption)
 	ON_BN_CLICKED(IDC_BUTTON_TEST, &CMFCApplication3Dlg::OnBnClickedButtonTest)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -117,10 +119,12 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 
 #ifdef _DEBUG
-	SetWindowText(_T("MPC5744P BootLoader通信_DEBUG_MODE"));
-	((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
+	SetWindowText(_T("BootLoader通信_DEBUG_MODE"));
+	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x00000000"));
 #else
-	SetWindowText(_T("MPC5744P BootLoader通信"));
+	SetWindowText(_T("BootLoader通信"));
+	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 #endif
 
 	//加载菜单栏
@@ -130,21 +134,31 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 
 	//设置状态栏
-	HWND hDlg = GetSafeHwnd();
-	hStatusWindow = CreateStatusWindow(WS_CHILD | WS_VISIBLE | WS_BORDER,
-		TEXT("就绪"),	//显示在状态栏上的信息
-		hDlg,			//父窗口句柄
-		IDS_STATUS);	// 预定义的资源ID，相当于状态栏的ID号：GetDlgItem(IDS_STATUS)
-	
-	int pint[2] = { 350,-1 };
-	//状态栏第一个方格右边界离窗口客户区左边界的距离为100
-	//第二个方格右边界离窗口客户区左边界的距离为200
-	//...以此类推
-	//-1表示该方格的右边界为为窗口客户区的右边界
-	::SendMessage(hStatusWindow, SB_SETPARTS, 2, (LPARAM)pint);
-	::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN未连接"));
-	::SendMessage(hStatusWindow, SB_SETTEXT, 1, (LPARAM)TEXT("下载 0%"));
 
+
+	UINT arr[3] = {13597461,13597462,13597463};
+	m_StatusBar.Create(this);
+	m_StatusBar.SetIndicators(arr,sizeof(arr)/sizeof(UINT));
+	CRect rect;
+	GetClientRect(rect);
+	
+	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
+	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
+
+	m_StatusBar.SetPaneInfo(1,arr[1],0,60);
+	m_StatusBar.SetPaneText(1,_T("下载0%"));
+
+	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
+	RepositionBars(AFX_IDW_CONTROLBAR_FIRST,
+		AFX_IDW_CONTROLBAR_LAST,
+		0);
+	RECT l_rect;
+	m_StatusBar.GetItemRect(2,&l_rect);
+	m_ProgressState.SetParent(&m_StatusBar);
+	m_ProgressState.MoveWindow(&l_rect);
+	m_ProgressState.ShowWindow(SW_SHOW);
+	m_ProgressState.SetRange(0,100);
+	m_ProgressState.SetPos(0);
 
 
 	//设置默认值
@@ -155,14 +169,15 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->SetCurSel(0);
 	//0x00FE0000
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->SetWindowTextW(_T("0x00FE0000"));
-	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x"));
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
+	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x00FF0000"));
+//	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 	((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->SetCheck(TRUE);
 	//禁用地址
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->EnableWindow(FALSE);
 	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->EnableWindow(FALSE);
 
 	m_Connect = FALSE;
+	canFrameCount = 0;
 
 	//接收和发送数据缓冲区
 	receiceData = new BaseType(8);
@@ -170,18 +185,18 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	sendData2 = new BaseType(24);
 
 	//线程事件
-	receiveEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
-	exitEvent1 = CreateEvent(NULL,FALSE,FALSE,NULL);
-	exitEvent2 = CreateEvent(NULL,FALSE,FALSE,NULL);
+	//receiveEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
+	//exitEvent1 = CreateEvent(NULL,FALSE,FALSE,NULL);
+	//exitEvent2 = CreateEvent(NULL,FALSE,FALSE,NULL);
 
 	filePathName = _T("");
 	fileToWrite = NULL;
 	startAddress = 0;
 	stopAddress  = 0;
 
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
-
 
 
 void CMFCApplication3Dlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -238,7 +253,7 @@ HCURSOR CMFCApplication3Dlg::OnQueryDragIcon()
 void CMFCApplication3Dlg::OnBnClickedButtonTest()
 {
 	// DEBUG模式下有效，否则隐藏
-
+	OnBnClickedButtonStartbootloader();
 #if 1
 	UCHAR a,b,c;
 	a = 0;
@@ -280,12 +295,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 	if (m_Connect)
 	{
 		//已连接，断开连接
-		returnCode = DisConnectCan(a,b,c);
+		returnCode = DisConnectCan();
 		m_Connect = FALSE;
 		((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(FALSE);
 		((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("连接CAN"));
 
-		::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已断开"));
+		m_StatusBar.SetPaneText(0,_T("CAN已断开"));
+		
 	}
 	else
 	{
@@ -298,14 +314,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 			m_Connect = TRUE;
 			((CButton*)GetDlgItem(IDC_BUTTON_STARTBOOTLOADER))->EnableWindow(TRUE);
 			((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("断开CAN"));
-
 			//set the status bar
-			::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN已连接"));
+			m_StatusBar.SetPaneText(0,_T("CAN已连接"));
 			break;
 
 		default:
 			//未知错误
-			::SendMessage(hStatusWindow, SB_SETTEXT, 0, (LPARAM)TEXT("CAN 未知错误"));
+			m_StatusBar.SetPaneText(0,_T("CAN未知错误"));
 			break;
 		}
 	}
@@ -337,76 +352,6 @@ void CMFCApplication3Dlg::OnBnClickedButtonFilebrowse()
 	{
 		return;
 	}
-
-#if 0
-
-	fileToWrite = new CAnalysisFile(filePathName);
-
-	fileToWrite->CheckSrecFile();
-	fileToWrite->SeekToBegin();
-
-
-	if (!fileToWrite->SetArrange(TRUE,0x00fa0000,0x00fa0001))
-	{
-		return;
-	}
-
-	int a=FILE_READ_NORMAL;
-	while(a==FILE_READ_NORMAL)
-	{
-		try{
-			a=fileToWrite->ReadNextLine();
-		}catch(char *s)
-		{
-			CString tmp(s);
-			AfxMessageBox(tmp);
-			return;
-		}
-		
-		CString tmp;
-
-		switch(a)
-		{
-		case FILE_READ_NORMAL:
-			//正常发送
-
-			if(!GenerateSendOrder(
-				ORDER_PROGRAM,
-				fileToWrite->GetDataSendLength(),
-				fileToWrite->GetDataSend(),
-				fileToWrite->GetDataSendAddr()))
-					return ;
-				SendOrder(sendData2);
-
-				tmp.Format(_T("下载 %d"),fileToWrite->GetSendedPercent());
-				tmp+="%";
-				::SendMessage(hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
-			break;
-		case FILE_READ_ERROR:
-			//读取错误
-			return ;
-			break;
-		case FILE_READ_END:
-			//文件结束
-			tmp.Format(_T("下载 %d"),fileToWrite->GetSendedPercent());
-			tmp+="%";
-			::SendMessage(hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
-
-			ShowInfo(_T("读取结束"),0);
-			break;
-		}
-
-		Sleep(200);
-	}
-
-	if (fileToWrite!=NULL)
-	{
-		fileToWrite->Close();
-		delete fileToWrite;
-		fileToWrite = NULL;
-	}
-#endif
-
 }
 
 
@@ -423,10 +368,11 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//擦除			boot,key,erase,boot_end,get_version
 	//只写数据		boot,key,program,boot_end,get_version
 	//擦除并编程  boot,key,program,boot_end,get_version
-	
+
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
+	
 	if (!CStringToUINT(str,passWord,_T("密码")))
 	{
 		return;
@@ -434,98 +380,118 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件
-	if (filePathName.IsEmpty())
+	if(!((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())
 	{
-		AfxMessageBox(_T("请选择SREC文件"));
-		return;
-	}else
-	{
-		if (NULL!=fileToWrite)
+		if (filePathName.IsEmpty())
 		{
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite=NULL;
-		}
-		if (NULL==fileToWrite)
-		{
-			fileToWrite = new CAnalysisFile(filePathName);
-		}
-		if (NULL==fileToWrite)
-		{
-			AfxMessageBox(_T("文件打开失败，请重试！"));
-			ShowInfo(_T("文件打开失败，请重试！"),0);
-			ShowInfo(_T("退出BootLoader"),0);
+			AfxMessageBox(_T("请选择SREC文件"));
 			return;
-		}else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+		}else
 		{
-			AfxMessageBox(_T("文件格式错误，请检查！"));
-			ShowInfo(_T("文件格式错误，请检查！"),0);
-			ShowInfo(_T("退出BootLoader"),0);
-			fileToWrite->Close();
-			delete fileToWrite;
-			fileToWrite = NULL;
-			return;
+			if (NULL!=fileToWrite)
+			{
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite=NULL;
+			}
+			if (NULL==fileToWrite)
+			{
+				fileToWrite = new CAnalysisFile(filePathName);
+			}
+			if (NULL==fileToWrite)
+			{
+				AfxMessageBox(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("文件打开失败，请重试！"));
+				//ShowInfo(_T("退出BootLoader"));
+				return;
+			}
+			/*
+			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
+			{
+				AfxMessageBox(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("文件格式错误，请检查！"));
+				ShowInfo(_T("退出BootLoader"));
+				fileToWrite->Close();
+				delete fileToWrite;
+				fileToWrite = NULL;
+				return;
+			}*/
+			fileToWrite->SeekToBegin();
+			//ShowInfo(_T("文件打开成功！"));
 		}
-		ShowInfo(_T("文件打开成功！"),0);
 	}
 
 	//step3.获取操作模式
+	//读取INI配置文件
+	CString AppName,startAddr,endAddr;
+	CString path = _T(".//bootcfg.ini");
+	CFileFind finder;
 
 	int l_writeData = ((CButton *)GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck();
 	int l_erase = ((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck();
 	int l_program = ((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck();
 	m_startFromMain = ((CButton *)GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck();
-	if (1==l_writeData)
+	if (1==l_writeData || 1==l_program)
 	{
-		//只写数据
 		CString str;
-		((CEdit *)GetDlgItem(IDC_EDIT_STARTADDRESS))->GetWindowTextW(str);
-		if(!CStringToUINT(str,startAddress,_T("地址")))
+		if (!finder.FindFile(path))
 		{
+			AfxMessageBox(_T("未找到配置文件"));
 			return;
 		}
+		else
+		{
+			if(1==l_writeData)
+				AppName = _T("DataSegment");
+			else if(1==l_program)
+				AppName = _T("CodeSegment");
 
+			startAddr = _T("startAddr");
+			endAddr = _T("endAddr");
+			startAddress = ::GetPrivateProfileIntW(AppName,startAddr,1,path);
+			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,1,path);
+			if (stopAddress==1||startAddress==1)
+			{
+				AfxMessageBox(_T("地址读取错误，请检查"));
+				return;
+			}
+		}
+		/*
 		if (startAddress%8!=0)
 		{
 			AfxMessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"));
-			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"),0);
-			ShowInfo(_T("退出BootLoader"),0);
+			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
+			ShowInfo(_T("退出BootLoader"));
+			return;
+		}*/
+		//设置边界
+		try{
+			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
+			{
+				AfxMessageBox(_T("地址设置错误，请重试！"));
+				return;
+			}
+		}catch(char *s)
+		{
+			CString tmp(s);
+			AfxMessageBox(tmp);
 			return;
 		}
 
-		((CEdit *)GetDlgItem(IDC_EDIT_ENDADDRESS))->GetWindowTextW(str);
-		if(!CStringToUINT(str,stopAddress,_T("地址")))
-		{
-			return;
-		}
 
-		if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
-		{
-			AfxMessageBox(_T("地址设置错误，请重试！"));
-			return;
-		}
-		//启动线程
-		AfxBeginThread(SendThreadProgram,this);
-		return;
-	}else if (1==l_erase)
-	{
-		//擦除
-		//启动线程
-		AfxBeginThread(SendThreadErase,this);
-		return;
-	}else if (1==l_program)
-	{
-		//编程
-		if (!fileToWrite->SetArrange(TRUE))
-		{
-			AfxMessageBox(_T("地址设置错误，请重试！"));
-			return;
-		}
-		AfxBeginThread(SendThreadProgram,this);
-		return;
 	}
-
-
+	//启动线程
+	ShowProgress(0);
+	m_ListInfo.ResetContent();
+	AfxBeginThread(SendThread,this);
+	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
+	/*
+	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
+	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
+	GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(FALSE);
+	GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(FALSE);
+	GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(FALSE);
+	GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(FALSE);*/
 }
 
 BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
@@ -599,13 +565,11 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 	case 0:
 		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(TRUE);
-		((CCheckListBox*)GetDlgItem(IDC_CHECK_SKIPPROMPT))->EnableWindow(TRUE);
 		
 		break;
 	case 1:
 		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(FALSE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(FALSE);
-		((CCheckListBox*)GetDlgItem(IDC_CHECK_SKIPPROMPT))->EnableWindow(FALSE);
 		break;
 	}
 	
@@ -617,20 +581,46 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		{0x00,0x14},//1000Kbps
 		{0x00,0x1C},//500Kbps
 		{0x01,0x1C},//250Kbps
+		{0x03,0x1C},//125Kbps
 		{0x04,0x1C}//100Kbps
+	};
+	const DWORD baudRate_E[5] = {
+		0x060003, //1000Kbps
+		//0x060004,//800Kbps
+		0x060007,//500Kbps
+		0x1C0008,//250Kbps
+		0x1C0011,//125Kbps
+		0x160023 //100Kbps
+		//0x1C002C, //20Kbps
+		//0x1600B3, //20Kbps
+		//0x1C00E0,//10Kbps
+		//0x1C01C1//5Kbps
 	};
 	const unsigned int devtype[2]={
 		VCI_USBCAN2,
 		VCI_USBCAN_2E_U
 	};
 	DWORD devindex = 0;
+	DWORD baud_E = 0;
 	VCI_INIT_CONFIG init_config;
-	init_config.AccCode = 0x00000000;//验收码
-	init_config.AccMask = 0xFFFFFFFF;//屏蔽码
-	init_config.Timing0 = baudRate[baudRateIndex][0];//设置波特率
-	init_config.Timing1 = baudRate[baudRateIndex][1];
-	init_config.Filter = 1;//单滤波
-	init_config.Mode = 0;//正常模式
+	VCI_FILTER_RECORD filterRecord;	//for USBCAN-2E-U
+
+	if(0 == typeIndex)//for USBCAN　exclude USBCAN-2E-U series
+	{
+		init_config.AccCode = 0x00000000;//验收码
+		init_config.AccMask = 0xFFFFFFFF;//屏蔽码
+		init_config.Timing0 = baudRate[baudRateIndex][0];//设置波特率
+		init_config.Timing1 = baudRate[baudRateIndex][1];
+		init_config.Filter = 1;//单滤波
+		init_config.Mode = 0;//正常模式
+	}
+	else if(1 == typeIndex)//for USBCAN USBCAN-2E-U series
+	{
+		init_config.Mode = 0;//正常模式
+		baud_E = baudRate_E[baudRateIndex];
+		filterRecord.Start = 0x00000000;
+		filterRecord.End = 0x00000000;
+	}
 
 	m_devtype = devtype[typeIndex];
 	m_devind = 0;//CAN设备索引号
@@ -638,28 +628,90 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 
 	if(VCI_OpenDevice(m_devtype, m_devind, 0) != STATUS_OK)
 	{
-		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
+		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK);
 		return CAN_OPENDEV_ERROR;
+	}
+	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to init the baud 
+	{
+		if (VCI_SetReference(m_devtype,m_devind, m_cannum, 0, &baud_E) != STATUS_OK)
+		{
+			MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_OPENDEV_ERROR;
+		}
+		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
+		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
+		{
+			//MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
+			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_SETFILTER_ERROR;
+		}
 	}
 	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
 	{
-		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK|MB_ICONQUESTION);
+		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK);
 		VCI_CloseDevice(m_devtype, m_devind);
 		return CAN_INITDEV_ERROR;
 	}
-
+	if(VCI_StartCAN(m_devtype,m_devind,m_cannum) != 1)
+	{
+		MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
+		return CAN_STARTDEV_ERROR;
+	}
+	/*
+	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to set the filter
+	{
+		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
+		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
+		{
+			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
+			VCI_CloseDevice(m_devtype,m_devind);
+			return CAN_SETFILTER_ERROR;
+		}
+	}*/
+	
 	return CAN_CONNECT_OK;
 }
-int CMFCApplication3Dlg::DisConnectCan(int canType,int channel,int baudRate)
+int CMFCApplication3Dlg::DisConnectCan()
 {
-	Sleep(500);//断开连接之前先休眠
-	VCI_CloseDevice(m_devtype,m_devind);
+	if(m_Connect)
+	{
+		Sleep(500);//断开连接之前先休眠
+		VCI_CloseDevice(m_devtype,m_devind);
+	}
 	return CAN_DISCONNECT_OK;
 }
-void CMFCApplication3Dlg::ShowInfo(CString str, int code)
+void CMFCApplication3Dlg::ShowProgress(int percent)
 {
-	m_ListInfo.InsertString(m_ListInfo.GetCount(),str);
-	m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
+	CString tmp;
+	//tmp.Format(_T("下载 %d"),fileToWrite->GetSendedPercent());
+	tmp.Format(_T("下载 %d"),percent);
+	tmp+="%";
+	::SendMessage(m_StatusBar.m_hWnd, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
+	//m_StatusBar.SetPaneText(1,tmp);
+	//m_ProgressState.SetPos(fileToWrite->GetSendedPercent());
+	m_ProgressState.SetPos(percent);
+}
+void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
+{
+	CString strInfo;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	strInfo.Format(_T("%d-%d-%d %d:%d:%d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
+	//strInfo = strTime + str;
+	strInfo = str;
+	if(index == -1)//在m_ListInfo末尾插入
+	{
+		m_ListInfo.InsertString(m_ListInfo.GetCount(),strInfo);
+		m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
+	}
+	else
+	{
+		m_ListInfo.DeleteString(index);
+		m_ListInfo.InsertString(index, strInfo);
+		m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
+	}
 }
 void CMFCApplication3Dlg::ShowErrMessageBox(CString err)
 {
@@ -668,16 +720,16 @@ void CMFCApplication3Dlg::ShowErrMessageBox(CString err)
 
 BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d,UINT addr/*=0*/ )
 {
-	int random;
+	UINT random;
 	switch(order)
 	{
 	case ORDER_BOOT:
 		sendData1->SetData(ORDER_BOOT,len,passWord);
 		break;
 	case ORDER_KEY:
-		srand(time(NULL)); 
-		random = rand();
-		receiceData->random =random;
+		srand((UINT)time(NULL)); 
+		random = (UINT)(rand());
+		receiceData->random = random;
 		sendData1->SetData(ORDER_KEY,len,random);
 		break;
 	case ORDER_ERASE:
@@ -695,831 +747,1215 @@ BOOL CMFCApplication3Dlg::GenerateSendOrder( char order,UCHAR len,const UCHAR *d
 	case ORDER_PROGRAM:
 		sendData2->SetData(ORDER_PROGRAM,len,addr,d);
 		break;
+	case ORDER_PROGDATA:
+		sendData2->SetData(ORDER_PROGDATA,len,addr,d);
+		break;
+	case ORDER_SPERASE:
+		sendData2->SetData(ORDER_SPERASE,len,addr,d);
+		break;
 	}
 
 	return TRUE;
 }
 
-void CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
+BOOL CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 {
-	VCI_CAN_OBJ canframe;
-	canframe.SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
-	canframe.ExternFlag = 0;//0:标准帧,1:扩展帧
-	canframe.RemoteFlag = 0;//禁用远程帧
-	canframe.DataLen = 8;
+	VCI_CAN_OBJ canframe[3];
+
+#ifdef _SIMULATOR
+	canframe[0].SendType = 2;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe[1].SendType = 2;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe[2].SendType = 2;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+#else
+	canframe[0].SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe[1].SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+	canframe[2].SendType = 0;//0:正常发送，1：单次发送，2：自发自收，3：单次自发自收
+#endif
+	canframe[0].ExternFlag = 0;//0:标准帧,1:扩展帧
+	canframe[0].RemoteFlag = 0;//禁用远程帧
+	canframe[0].DataLen = 8;
+
+	canframe[1].ExternFlag = 0;//0:标准帧,1:扩展帧
+	canframe[1].RemoteFlag = 0;//禁用远程帧
+	canframe[1].DataLen = 8;
+
+	canframe[2].ExternFlag = 0;//0:标准帧,1:扩展帧
+	canframe[2].RemoteFlag = 0;//禁用远程帧
+	canframe[2].DataLen = 8;
+	
 
 	if((ORDER_BOOT == sendframe->command) || (ORDER_KEY == sendframe->command))//帧格式1
 	{
-		if(sendframe->dataLength != 8)
+		if(sendframe->totalLength != 8)
 		{
 			//TODO:数据长度异常
-			ShowInfo(_T("CAN发送数据长度异常"),0);
+			ShowInfo(_T("CAN发送数据长度异常"));
+			isTransmitOK = FALSE;
 		}
 		else
 		{
-			canframe.ID = MSGID_FARME1;//帧格式1 ID
-			memcpy(&canframe.Data, &sendframe->allData, 8);
-			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
+			canframe[0].ID = MSGID_FARME1;//帧格式1 ID
+			memcpy(canframe[0].Data, sendframe->allData, 8);
+
+			isTransmitOK = FALSE;
+			VCI_ClearBuffer(m_devtype, m_devind, m_cannum);//发送之前清除接收buffer
+
+			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 1))//发送成功
 			{
-				//do nothing
+				isTransmitOK = TRUE;
+				canFrameCount += 2;
+
+#ifdef _MONITOR
+				CString str,tmpstr;
+	
+				str = "";
+				tmpstr.Format(_T("发送帧ID:%08x "),canframe[0].ID);
+				str += tmpstr;
+				tmpstr = " 数据：";
+				str += tmpstr;
+				for(int j = 0; j < canframe[0].DataLen; j++)
+				{
+					tmpstr.Format(_T("%02x "),canframe[0].Data[j]);
+					str += tmpstr;
+				}
+				ShowInfo(str);
+#endif
 			}
 			else
 			{
 				//TODO：发送失败
-				ShowInfo(_T("CAN发送失败"),0);
+				ShowInfo(_T("CAN发送失败"));
+				isTransmitOK = FALSE;
 			}
 		}
 	}
 	else//帧格式2
 	{
-		if(sendframe->dataLength != 24)
+		if(sendframe->totalLength != 24)
 		{
 			//TODO:数据长度异常
+			ShowInfo(_T("CAN发送数据长度异常"));
+			isTransmitOK = FALSE;
 		}
 		else
 		{
-			USHORT canframeNum = 0;
-			ULONG transmitStatus = 0;
-			for(canframeNum = 0; canframeNum < 3; canframeNum++)
-			{
-				canframe.ID = MSGID_FARME2[canframeNum];
-				memcpy(&canframe.Data, &(sendframe->allData[canframeNum*8]), 8);
-				if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, &canframe, 1))//发送成功
-				{
-					//do nothing
-				}
-				else
-				{
-					//TODO：一次发送失败，跳出 or 重试 is a question
-					ShowInfo(_T("CAN发送失败"),canframeNum);
-				}				
-			}
-		}
-	}
-}
+			canframe[0].ID = MSGID_FARME2[0];
+			canframe[1].ID = MSGID_FARME2[1];
+			canframe[2].ID = MSGID_FARME2[2];
+			memcpy(canframe[0].Data, &(sendframe->allData[0*8]), 8);
+			memcpy(canframe[1].Data, &(sendframe->allData[1*8]), 8);
+			memcpy(canframe[2].Data, &(sendframe->allData[2*8]), 8);
+			
+			isTransmitOK = FALSE;
+			VCI_ClearBuffer(m_devtype, m_devind, m_cannum);//发送之前清除接收buffer
 
-UINT CMFCApplication3Dlg::ReceiveThread( void *param )
-{
-	CMFCApplication3Dlg *dlg = (CMFCApplication3Dlg *)param;
-	VCI_CAN_OBJ frameinfo[50];
-	VCI_ERR_INFO errinfo;
-	int len = 1;
-	int i = 0;
-	while(1)
-	{
-		Sleep(1);
-		if(FALSE == dlg->m_Connect)
-			break;
-		len=VCI_Receive(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, frameinfo, 50, 200);
-		if(len<=0)
-		{
-			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
-			//千万不能省略这一步（即使你可能不想知道错误码是什么）
-			VCI_ReadErrInfo(dlg->m_devtype, dlg->m_devind, dlg->m_cannum, &errinfo);
-		}
-		else
-		{
-			/*
-			for(i = 0; i < len; i++)
+			if(3 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 3))//发送成功
 			{
-				if(frameinfo[i].RemoteFlag != 0)//
+				isTransmitOK = TRUE;
+				canFrameCount += 4;
+#ifdef _MONITOR
+				CString str,tmpstr;
+				for(int i = 0; i < 3; i++)
 				{
-					//TODO:出现了远程帧
-				}
-				else
-				{
-					if(frameinfo[i].ID == MSGID_FRAMEREV)//接收正确的帧ID
+					str = "";
+					tmpstr.Format(_T("发送帧ID:%08x "),canframe[i].ID);
+					str += tmpstr;
+					tmpstr = " 数据：";
+					str += tmpstr;
+					for(int j = 0; j < canframe[i].DataLen; j++)
 					{
-						dlg->receiceData->dataLength = frameinfo[i].DataLen;
+						tmpstr.Format(_T("%02x "),canframe[i].Data[j]);
+						str += tmpstr;
 					}
+					ShowInfo(str);
 				}
-			}*/
-			if(frameinfo[len-1].RemoteFlag != 0)//每次都读最新的数据
-			{
-				//TODO:出现了远程帧
-				dlg->ShowInfo(_T("出现远程帧"),0);
+#endif
 			}
 			else
 			{
-				if((frameinfo[len-1].ID == MSGID_FRAMEREV) && (frameinfo[len-1].DataLen == 8))//接收正确的帧ID
+				//TODO：一次发送失败，跳出 or 重试 is a question
+				ShowInfo(_T("CAN发送失败"));
+				isTransmitOK = FALSE;
+			}
+			
+		}
+	}
+	return isTransmitOK;
+}
+
+BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
+{
+	VCI_ERR_INFO errinfo;
+	int len = 1;
+	int receiveBufLen = 0;
+	int i = 0;
+	long startTick = 0;
+	long endTick = 0;
+	UINT waitTick = 0;
+
+	while(isTransmitOK != TRUE);
+	if(FALSE == m_Connect)
+	{
+		return FALSE;
+	}
+	startTick = GetTickCount();
+	endTick = startTick;
+	waitTick = endTick - startTick;
+	
+	while(waitTick < timeOut)//读CAN缓冲区超时判断
+	{
+		receiveBufLen = VCI_GetReceiveNum(m_devtype,m_devind,m_cannum);
+#ifdef _SIMULATOR
+		if(sendThreadState == ORDER_BOOT || sendThreadState == ORDER_KEY)
+		{
+			if(receiveBufLen > 0)
+			{
+				break;
+			}
+		}
+		else
+		{
+			if(receiveBufLen == 3)
+			{
+				break;
+			}
+		}
+#else
+		if(receiveBufLen > 0) 
+		{
+			break;
+		}
+#endif
+
+		endTick = GetTickCount();
+		if(endTick < startTick)
+		{
+			waitTick = 0xFFFFFFFF - startTick + endTick;
+		}
+		else
+		{
+			waitTick = endTick - startTick;
+		}
+	}
+	if(receiveBufLen <= 0)
+	{
+		//ShowInfo(_T("receiveBufLen <= 0"));
+		return FALSE;
+	}
+	/*
+	while(1)
+	{
+		receiveBufLen = VCI_GetReceiveNum(m_devtype,m_devind,m_cannum);
+		if(receiveBufLen > 0) break;
+	}*/
+
+	PVCI_CAN_OBJ frameinfo = new VCI_CAN_OBJ[receiveBufLen];
+	len = VCI_Receive(m_devtype, m_devind, m_cannum, frameinfo, receiveBufLen, 1);
+	if(len <= 0)
+	{
+		//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
+		//千万不能省略这一步（即使你可能不想知道错误码是什么）
+		VCI_ReadErrInfo(m_devtype, m_devind, m_cannum, &errinfo);
+		//ShowInfo(_T("len <= 0"));
+		return FALSE;
+	}
+	else
+	{
+#ifndef _SIMULATOR
+		for(i = 0; i < len; i++)
+		{
+			if(frameinfo[i].RemoteFlag != 0)
+			{
+				//TODO:出现了远程帧
+				ShowInfo(_T("出现远程帧"));
+			}
+			else if((frameinfo[i].ID == MSGID_FRAMEREV) && (frameinfo[i].DataLen == 8))//接收正确的帧ID
+			{
+				receiceData->SetAllData((const char *)(frameinfo[i].Data), 8);
+				if((receiceData->Calculate_Check() == frameinfo[i].Data[7]) && (receiceData->allData[0] == 0xA5))
 				{
-					dlg->receiceData->SetAllData((const char *)(&(frameinfo[len-1].Data[0])), 8);
-					if((dlg->receiceData->GetCheck() == frameinfo[len-1].Data[7]) && (dlg->receiceData->allData[0] == 0xA5))
-					{
-						dlg->receiceData->startSign = frameinfo[len-1].Data[0];
-						dlg->receiceData->returnValue = frameinfo[len-1].Data[1];
-						dlg->receiceData->dataLength = frameinfo[len-1].Data[2];
-						dlg->receiceData->m_check = frameinfo[len-1].Data[7];
-					}
-					else
-					{
-						//接收数据帧错误
-						memset(dlg->receiceData->allData, 0x00, dlg->receiceData->totalLength);
-						dlg->receiceData->returnValue = 0x00;
-					}
+					UINT returnData = 0;
+					receiceData->startSign = frameinfo[i].Data[0];
+					receiceData->returnValue = frameinfo[i].Data[1];
+					receiceData->dataLength = frameinfo[i].Data[2];
+					//采用big-endian接收下位机返回的数据
+					returnData = (frameinfo[i].Data[3]<<24)|frameinfo[i].Data[4]<<16|frameinfo[i].Data[5]<<8|frameinfo[i].Data[6];
+					receiceData->returnData = returnData; //*((UINT *)(&(frameinfo[i].Data[3])));
 					
+					receiceData->m_check = frameinfo[i].Data[7];
+					//SetEvent(receiveEvent);//设置接收事件
+				}
+				else
+				{
+					//接收数据帧错误
+					memset(receiceData->allData, 0x00, receiceData->totalLength);
+					receiceData->returnValue = 0x00;
+				}		
+			}
+		}
+
+		return TRUE;
+#endif
+	}
+#if (defined _MONITOR) //&& (!(defined _SIMULATOR))
+		{
+			CString str,tmpstr;
+			for(i = 0; i < len; i++)
+			{
+				str = "";
+				tmpstr.Format(_T("接收帧ID:%08x "),frameinfo[i].ID);
+				str += tmpstr;
+				tmpstr = " 数据：";
+				str += tmpstr;
+				
+				for(int j = 0; j < frameinfo[i].DataLen; j++)
+				{
+					tmpstr.Format(_T("%02x "),frameinfo[i].Data[j]);
+					str += tmpstr;
+				}
+				//tmpstr.Format(_T("时间:%08x "),frameinfo[i].TimeStamp);
+				//str += tmpstr;
+				tmpstr.Format(_T("等待时间 %d ms"),waitTick);
+				str += tmpstr;
+				tmpstr.Format(_T("接收 %d帧数据"),len);
+				str += tmpstr;
+				ShowInfo(str);
+			}
+		}
+#endif
+#ifdef _SIMULATOR
+		int FrameNum = 0;// for frame type 2
+		BOOL FrameStart = FALSE;// for frame type 2
+		UCHAR FrameOrder = 0;
+		for(i = 0;i < len; i++)
+		{
+			if(FrameStart)// for frame type 2
+			{
+				FrameNum++;
+				if(FrameNum == 3)
+				{
+					if(FrameOrder == ORDER_PROGRAM)
+					{
+						receiceData->returnValue = PROGRAM_OK;
+						//Sleep(20);		
+					}
+					else if(FrameOrder == ORDER_ERASE)
+					{
+						receiceData->returnValue = ERASE_OK;
+					}
+					else if(FrameOrder == ORDER_GETVERSION)
+					{
+						receiceData->returnValue = GETVERSION_OK;
+					}
+					else if(FrameOrder == ORDER_MAINSTART)
+					{
+						receiceData->returnValue = MAINSTART_OK;
+					}
+					else if(FrameOrder == ORDER_BOOTEND)
+					{
+						receiceData->returnValue = BOOTEND_OK;
+					}
+					else if(FrameOrder == ORDER_PROGDATA)
+					{
+						receiceData->returnValue = PROGDATA_OK;
+					}
+					else if(FrameOrder == ORDER_SPERASE)
+					{
+						receiceData->returnValue = SPERASE_OK;
+						FrameOrder = 0;
+					}
+					FrameOrder = 0;
+					FrameNum = 0;
+					FrameStart = FALSE;
+					return TRUE;				
+					//SetEvent(receiveEvent);//设置接收事件
+				}
+			}
+			else if(FrameStart == FALSE && ('$' == frameinfo[i].Data[0]))
+			{
+				if(ORDER_BOOT == frameinfo[i].Data[1])
+				{
+					receiceData->returnValue = PASSWORD_OK;
+					return TRUE;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_KEY == frameinfo[i].Data[1])
+				{
+					receiceData->returnValue = KEY_OK;
+					return TRUE;
+					//SetEvent(receiveEvent);//设置接收事件
+				}
+				else if(ORDER_ERASE == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_ERASE;
+					//dlg->receiceData->returnValue = ERASE_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_PROGRAM == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_PROGRAM;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_GETVERSION == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_GETVERSION;
+					//dlg->receiceData->returnValue = GETVERSION_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_MAINSTART == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_MAINSTART;
+					//dlg->receiceData->returnValue = MAINSTART_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_BOOTEND == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_BOOTEND;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_PROGDATA == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_PROGDATA;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_SPERASE == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_SPERASE;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
 				}
 			}
 		}
-	}
-
-	return 0;
+#endif	
 }
 
-UINT CMFCApplication3Dlg::SendThreadErase( void *param )
+
+BOOL CMFCApplication3Dlg::OrderBoot()
 {
-	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
-
-
-	//sendOrder(boot);
-	//sendOrder(key);
-	//sendOrder(program);
-	//sendOrder(boot_end);
-	//sendOrder(get_version);
-	int i;
-	BOOL exitSign;
-
-	//1.发送Boot
-	i = 0;
-	exitSign = FALSE;
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
 	do 
 	{
 		i++;
-		//sendOrder(boot);
-		if(!dlg->GenerateSendOrder(ORDER_BOOT,4,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData1);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)//WAIT_TIMEOUT
+		if(!GenerateSendOrder(ORDER_BOOT,4,NULL))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData1))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
 		{
 			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
+			switch(receiceData->returnValue)
 			{
-			case PASSWORD_OK:
-				dlg->ShowInfo(_T("密码正确"),0);
-				exitSign = TRUE;
+				case PASSWORD_OK:
+					ShowInfo(_T("密码正确"));
+					return TRUE;
 				break;
-			case PASSRORD_NOTOK:
-				dlg->ShowErrMessageBox(_T("密码错误"));
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return PASSRORD_NOTOK;
+				case PASSWORD_NOTOK:
+					ShowErrMessageBox(_T("密码错误,请重新输入密码"));
+					return FALSE;
 				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("BOOT命令校验错误，重新发送"),i);
-				exitSign = FALSE;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
 				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
-		}
-		
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定，终止发送"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
-	}
-
-	//2.发送key
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(key);
-		if(!dlg->GenerateSendOrder(ORDER_KEY,4,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData1);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case KEY_OK:
-				exitSign = TRUE;
-				dlg->ShowInfo(_T("校验通过"),0);
-				break;
-			case KEY_NOTOK://修改后的应答表里无此项，可删除
-				dlg->ShowErrMessageBox(_T("校验错误"));
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return KEY_NOTOK;
-				break;
-			case DATA_ERR:
-				dlg->ShowErrMessageBox(_T("校验错误"));
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return DATA_ERR;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
-		}
-
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
-	}
-
-	//3.发送erase
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(erase);
-		if(!dlg->GenerateSendOrder(ORDER_ERASE,0,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case ERASE_OK:
-				exitSign = TRUE;
-				dlg->ShowInfo(_T("擦除完成"),0);
-				break;
-			case ERASE_NOTOK:
-				dlg->ShowErrMessageBox(_T("擦除flash失败"));
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return ERASE_NOTOK;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("ERASE命令校验错误，重新发送"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
-		}
-
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定，擦除命令发送失败"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
-	}
-
-	//4.发送boot_end
-	i = 0;
-	exitSign = FALSE;
-	CString tmp=_T(""),tmp1=_T("");
-	do 
-	{
-		i++;
-		//sendOrder(boot_end);
-		if(!dlg->GenerateSendOrder(ORDER_BOOTEND,0,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case BOOTEND_OK:
-				exitSign = TRUE;
-				//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
-				tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
-				tmp = tmp1;
-				tmp1.Format(_T(" flash写入失败的次数:%d次"),dlg->receiceData->allData[4]);
-				tmp+= tmp1;
-				dlg->ShowInfo(tmp,0);
-				break;
-			case BOOTEND_NOTOK:
-				dlg->ShowInfo(_T("退出Boot失败，执行GetVersion命令"),0);
-				exitSign = TRUE;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
-		}
-
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),i);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
-	}
-
-	//5.发送get_version
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(get_version);
-		if(!dlg->GenerateSendOrder(ORDER_GETVERSION,0,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case GETVERSION_OK:
-				tmp = "BootLoader版本为: ";
-				tmp1.Format(_T("%d.%d"),
-					dlg->receiceData->allData[3],
-					dlg->receiceData->allData[4]);
-				tmp+= tmp1;
-				dlg->ShowInfo(tmp,0);
-				exitSign = TRUE;
-				break;
-			case GETVERSION_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowInfo(_T("获取BootLoader版本失败"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return GETVERSION_NOTOK;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("GET_VERSION校验错误"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
-		}
-
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
-	}
-	dlg->ShowInfo(_T("BootLoader完成"),0);
-	return 0;
-}
-
-UINT CMFCApplication3Dlg::SendThreadProgram( void *param )
-{
-	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
-
-	//sendOrder(boot);
-	//sendOrder(key);
-	//sendOrder(Erase);
-	//sendOrder(boot_end);
-	//sendOrder(get_version);
-	int i;
-	BOOL exitSign;
-
-	//1.发送Boot
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(boot);
-		if(!dlg->GenerateSendOrder(ORDER_BOOT,4,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData1);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)//WAIT_TIMEOUT
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case PASSWORD_OK:
-				dlg->ShowInfo(_T("密码正确"),0);
-				exitSign = TRUE;
-				break;
-			case PASSRORD_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("密码错误"));
-				dlg->ShowInfo(_T("密码错误"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return PASSRORD_NOTOK;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("密码校验错误,重新发送"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
 				break;
 			}
 		}
 		else
 		{
 			//超时，提示并退出			
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i < RETRY_TIMES && !exitSign );
 
-	if (i==10&&exitSign==FALSE)
+	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
 	}
+}
 
-	//2.发送key
-	i = 0;
-	exitSign = FALSE;
+BOOL CMFCApplication3Dlg::OrderKey()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
 	do 
 	{
 		i++;
-		//sendOrder(key);
-		if(!dlg->GenerateSendOrder(ORDER_KEY,4,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData1);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
+		if(!GenerateSendOrder(ORDER_KEY,4,NULL))
+		{
+			return  FALSE;
+		}
+		if(!SendOrder(sendData1))
+		{
+			return FALSE;
+		}
+		
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE) 
+		{
+			UINT l_key = 0;
+			//收到数据，判断数据是否正确
+			switch(receiceData->returnValue)
+			{
+				case KEY_OK:
+#ifndef _SIMULATOR
+					//上位机判断校验是否匹配
+					l_key = CalculateKey(receiceData->random);
+					if (l_key != receiceData->returnData)
+					{
+						//KEY校验未通过，退出
+						//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+						ShowInfo(_T("KEY校验错误"));
+						return  FALSE;
+					}
+					else
+#endif
+					{	
+						ShowInfo(_T("KEY校验通过"));
+						return TRUE;
+					}
+				break;
+				case KEY_NOTOK:
+					//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+					ShowInfo(_T("KEY校验错误"));
+					return FALSE;
+				break;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
+				break;
+
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
+				break;
+			}//for switch
+		}
+		else
+		{
+			//超时，提示并退出
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
+		}
+
+	} while ((i < RETRY_TIMES) && (!exitSign));
+
+	if ((i==RETRY_TIMES) && !exitSign)
+	{
+			//连接不稳定，退出
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
+	}
+}
+
+BOOL CMFCApplication3Dlg::OrderErase()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	do 
+	{
+		i++;
+		if(!GenerateSendOrder(ORDER_ERASE,0,NULL))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData2))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
 		{
 			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
+			switch(receiceData->returnValue)
 			{
-			case KEY_OK:
-				dlg->ShowInfo(_T("校验通过"),0);
-				exitSign = TRUE;
+				case ERASE_OK:
+					ShowInfo(_T("擦除完成"));
+					return TRUE;
 				break;
-			case KEY_NOTOK:
-				/*SetEvent(dlg->exitEvent1);*/
-				dlg->ShowErrMessageBox(_T("校验错误"));
-				dlg->ShowInfo(_T("校验错误，发送终止"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return KEY_NOTOK;
+				case ERASE_NOTOK:
+					ShowErrMessageBox(_T("擦除flash失败"));
+					return FALSE;
 				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("校验错误，发送终止"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return DATA_ERR;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
 				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
 				break;
 			}
 		}
 		else
 		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
+			//超时，提示并退出			
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i < RETRY_TIMES && !exitSign );
 
-	if (i==10&&exitSign==FALSE)
+	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		dlg->ShowInfo(_T("连接不稳定，终止发送"),0);
-		dlg->ShowInfo(_T("退出BootLoader"),0);
-		return DATA_ERR;
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
 	}
+}
 
-	//3.发送PROGRAM
-	CString tmp;
-	int a=FILE_READ_NORMAL;
-	while(a==FILE_READ_NORMAL)
+BOOL CMFCApplication3Dlg::OrderSPErase()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	do 
 	{
-		a=dlg->fileToWrite->ReadNextLine();
+		i++;
+		if(!GenerateSendOrder(ORDER_SPERASE,0,NULL))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData2))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
+		{
+			//收到数据，判断数据是否正确
+			switch(receiceData->returnValue)
+			{
+				case SPERASE_OK:
+					ShowInfo(_T("擦除完成"));
+					return TRUE;
+				break;
+				case SPERASE_NOTOK:
+					ShowErrMessageBox(_T("擦除flash失败"));
+					return FALSE;
+				break;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
+				break;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
+				break;
+			}
+		}
+		else
+		{
+			//超时，提示并退出			
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
+		}
+
+	} while (i < RETRY_TIMES && !exitSign );
+
+	if ((i == RETRY_TIMES) && !exitSign)
+	{
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
+	}
+}
+
+BOOL CMFCApplication3Dlg::OrderProgram()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	int a = FILE_READ_NORMAL;
+
+#ifndef _MONITOR
+	DWORD frameNum = 0; 
+	BOOL startProgram = FALSE;
+	int listIndex = -1;
+#endif
+
+	while(a == FILE_READ_NORMAL)
+	{
+		a = fileToWrite->ReadNextLine();
 		switch(a)
 		{
-		case FILE_READ_NORMAL:
-			//正常发送
+			case FILE_READ_NORMAL:
 			i = 0;
-			exitSign = FALSE;
 			do 
 			{
 				i++;
-				//sendOrder(erase);
-				if(!dlg->GenerateSendOrder(
-					ORDER_PROGRAM,
-					dlg->fileToWrite->GetDataSendLength(),
-					dlg->fileToWrite->GetDataSend(),
-					dlg->fileToWrite->GetDataSendAddr()))
-					return -1;
-				dlg->SendOrder(dlg->sendData2);
-				if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
+				if(!GenerateSendOrder(
+								ORDER_PROGRAM,
+								fileToWrite->GetDataSendLength(),
+								fileToWrite->GetDataSend(),
+								fileToWrite->GetDataSendAddr()))
+				{
+					return FALSE;
+				}
+				
+				if(!SendOrder(sendData2))
+				{
+					//ShowInfo(_T("发送命令失败"));
+					return FALSE;
+				}
+
+				if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
 				{
 					//收到数据，判断数据是否正确
-					switch(dlg->receiceData->returnValue)
+					switch(receiceData->returnValue)
 					{
-					case PROGRAM_OK:
-						exitSign = TRUE;
+						case PROGRAM_OK:
+							exitSign = TRUE;
+							ShowProgress(fileToWrite->GetSendedPercent());
+#ifndef _MONITOR
+							/*
+							if(frameNum % 4 == 0) strListInfo = "正在烧写.";
+							else if(frameNum % 4 == 1) strListInfo = "正在烧写..";
+							else if(frameNum % 4 == 2) strListInfo = "正在烧写...";
+							else if(frameNum % 4 == 3) strListInfo = "正在烧写....";
+							if(!startProgram)
+							{
+								listIndex = m_ListInfo.GetCount();
+								startProgram = TRUE;
+							}
+							ShowInfo(strListInfo, listIndex);
+							frameNum++;
+							*/
+							
+							if(!startProgram)
+							{
+								strListInfo = "正在烧写....";
+								ShowInfo(strListInfo);
+								startProgram = TRUE;
+							}
 
-						tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
-						tmp+="%";
-						::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
-
+#endif
 						break;
-					case PROGRAM_NOTOK:
-					case DATA_ERR:
-						exitSign = FALSE;
+						case PROGRAM_NOTOK:
+						case DATA_ERR:
+							strListInfo.Format(_T("本帧数据烧写失败，正在第%d次重试"), i);
+							ShowInfo(strListInfo);
+							exitSign = FALSE;
+						break;
+						case ADDRALIGN_ERR:
+							ShowInfo(_T("文件地址对齐错误，无法写入"));
 						break;
 					}
 				}
 				else
 				{
-					//超时，提示并退出
-#ifdef _TEST
-					exitSign = TRUE;
-#else
-					dlg->ShowErrMessageBox(_T("连接失败"));
-					return -1;
-#endif
+					//超时，提示并退出			
+					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					return FALSE;
 				}
 
-			} while (i<10 && !exitSign);
+			} while (i<RETRY_TIMES && !exitSign);
 
-			if (i==10&&exitSign==FALSE)
+			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
-				dlg->ShowErrMessageBox(_T("连接不稳定"));
-				return DATA_ERR;
+				ShowInfo(_T("多次重试失败，请重新操作"));
+				return FALSE;
 			}
 			break;
-		case FILE_READ_ERROR:
-			//读取错误
-			dlg->ShowInfo(_T("读取错误，停止发送"),0);
-			return FILE_READ_ERROR;
+			case FILE_READ_ERROR:
+				//读取错误
+				ShowInfo(_T("读取错误，停止发送"));
+				return FALSE;
 			break;
-		case FILE_READ_END:
-			//文件结束
-			tmp.Format(_T("下载 %d"),dlg->fileToWrite->GetSendedPercent());
-			tmp+="%";
-			::SendMessage(dlg->hStatusWindow, SB_SETTEXT, 1, (LPARAM)tmp.GetBuffer());
-
-			dlg->ShowInfo(_T("读取结束"),0);
+			case FILE_READ_END:
+					//文件结束
+				ShowProgress(fileToWrite->GetSendedPercent());
+				ShowInfo(_T("烧写完成"));//TODO:文件读取结束最后一帧发送完成才是烧写完成
+				return TRUE;
 			break;
-		}
-	}
+		}//for switch(a)
+	}//for while
+}
 
-	CString tmp1;
+BOOL CMFCApplication3Dlg::OrderProgData()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	int a = FILE_READ_NORMAL;
 
-	//4.发送boot_end
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(boot_end);
-		if(!dlg->GenerateSendOrder(ORDER_BOOTEND,0,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
-		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
-			{
-			case BOOTEND_OK:
-				exitSign = TRUE;
-				//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
-				tmp1.Format(_T("数据传输错误次数:%d次, "),dlg->receiceData->allData[3]);
-				tmp = tmp1;
-				tmp1.Format(_T(" flash写入失败的次数:%d次"),dlg->receiceData->allData[4]);
-				tmp+= tmp1;
-				dlg->ShowInfo(tmp,0);
-				break;
-			case BOOTEND_NOTOK:
-				dlg->ShowInfo(_T("退出Boot失败，执行GetVersion命令"),0);
-				exitSign = TRUE;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("BOOT_END命令校验错误，重新发送"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
+#ifndef _MONITOR
+	static DWORD frameNum = 0; 
+	static BOOL startProgram = FALSE;
+	static int listIndex = -1;
 #endif
-		}
 
-	} while (i<10 && !exitSign);
-
-	if (i==10&&exitSign==FALSE)
+	while(a == FILE_READ_NORMAL)
 	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		return DATA_ERR;
-	}
-
-	//5.发送get_version
-	i = 0;
-	exitSign = FALSE;
-	do 
-	{
-		i++;
-		//sendOrder(get_version);
-		if(!dlg->GenerateSendOrder(ORDER_GETVERSION,0,NULL))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)
+		a = fileToWrite->ReadNextLine();
+		switch(a)
 		{
-			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
+			case FILE_READ_NORMAL:
+			i = 0;
+			do 
 			{
-			case GETVERSION_OK:
-				tmp = "BootLoader版本为: ";
-				tmp1.Format(_T("%d.%d"),
-					dlg->receiceData->allData[3],
-					dlg->receiceData->allData[4]);
-				tmp+= tmp1;
-				dlg->ShowInfo(tmp,0);
-				exitSign = TRUE;
-				break;
-			case GETVERSION_NOTOK:
-				dlg->ShowInfo(_T("获取BootLoader版本失败"),0);
-				dlg->ShowInfo(_T("退出BootLoader"),0);
-				return GETVERSION_NOTOK;
-				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("GET_VERSION校验错误"),i);
-				exitSign = FALSE;
-				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
-				break;
-			}
-		}
-		else
-		{
-			//超时，提示并退出
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
+				i++;
+				if(!GenerateSendOrder(
+								ORDER_PROGDATA,
+								fileToWrite->GetDataSendLength(),
+								fileToWrite->GetDataSend(),
+								fileToWrite->GetDataSendAddr()))
+				{
+					return FALSE;
+				}
+				
+				if(!SendOrder(sendData2))
+				{
+					return FALSE;
+				}
+				if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
+				{
+					//收到数据，判断数据是否正确
+					switch(receiceData->returnValue)
+					{
+						case PROGDATA_OK:
+							exitSign = TRUE;
+							ShowProgress(fileToWrite->GetSendedPercent());
+#ifndef _MONITOR
+							/*
+							if(frameNum % 4 == 0) tmp = "正在烧写.";
+							else if(frameNum % 4 == 1) tmp = "正在烧写..";
+							else if(frameNum % 4 == 2) tmp = "正在烧写...";
+							else if(frameNum % 4 == 3) tmp = "正在烧写....";*/
+							strListInfo = "正在烧写....";
+						
+							if(!startProgram)
+							{
+								listIndex = m_ListInfo.GetCount();
+								startProgram = TRUE;
+								ShowInfo(strListInfo, listIndex);
+							}
+							//dlg->ShowInfo(tmp, listIndex);
+							//frameNum++;
 #endif
-		}
+						break;
+						case PROGDATA_NOTOK:
+						case DATA_ERR:
+							strListInfo.Format(_T("本帧数据烧写失败，正在第%d次重试"), i);
+							ShowInfo(strListInfo);
+							exitSign = FALSE;
+						break;
+						case ADDRALIGN_ERR:
+							ShowInfo(_T("文件地址对齐错误，无法写入"));
+						break;
+					}
+				}
+				else
+				{
+					//超时，提示并退出			
+					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					return FALSE;
+				}
 
-	} while (i<10 && !exitSign);
+			} while (i<RETRY_TIMES && !exitSign);
 
-	if (i==10&&exitSign==FALSE)
-	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		return DATA_ERR;
-	}
+			if (i==RETRY_TIMES&&exitSign==FALSE)
+			{
+				//连接不稳定，退出
+				ShowInfo(_T("多次重试失败，请重新操作"));
+				return FALSE;
+			}
+			break;
+			case FILE_READ_ERROR:
+				//读取错误
+				ShowInfo(_T("读取错误，停止发送"));
+				return FALSE;
+			break;
+			case FILE_READ_END:
+				//文件结束
+				ShowProgress(fileToWrite->GetSendedPercent());
+				ShowInfo(_T("烧写完成"));//TODO:文件读取结束最后一帧发送完成才是烧写完成
+				return TRUE;
+			break;
+		}//for switch(a)
+	}//for while
+}
 
-	//6.从main启动
-	if (dlg->m_startFromMain!=1)
-	{
-		dlg->ShowInfo(_T("BootLoader完成"),0);
-		return 0;
-	}
-	i = 0;
-	exitSign = FALSE;
+
+BOOL CMFCApplication3Dlg::OrderBootEnd()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
 	do 
 	{
 		i++;
-		//sendOrder(main_start);
-		if(!dlg->GenerateSendOrder(
-			ORDER_MAINSTART,
-			4,
-			NULL,
-			dlg->fileToWrite->GetMainStartAddr()))
-			return -1;
-		dlg->SendOrder(dlg->sendData2);
-		if (WaitForSingleObject(dlg->receiveEvent,1000)==WAIT_OBJECT_0)//WAIT_TIMEOUT
+		if(!GenerateSendOrder(ORDER_BOOTEND,0,NULL))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData2))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
 		{
 			//收到数据，判断数据是否正确
-			switch(dlg->receiceData->returnValue)
+			switch(receiceData->returnValue)
 			{
-			case MAINSTART_OK:
-				dlg->ShowInfo(_T("主函数进入成功"),0);
-				exitSign = TRUE;
+				case BOOTEND_OK:
+					//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
+					strListInfo.Format(_T("数据传输错误次数:%d次\n flash写入失败的次数:%d次"),receiceData->allData[3],receiceData->allData[4]);
+					
+					//tmp1.Format(_T(" flash写入失败的次数:%d次"),receiceData->allData[4]);
+					//tmp+= tmp1;
+					ShowInfo(strListInfo);
+					return TRUE;
 				break;
-			case MAINSTART_NOTOK:
-				dlg->ShowInfo(_T("主函数进入不成功"),0);
-				return MAINSTART_NOTOK;
+				case BOOTEND_NOTOK:
+					ShowInfo(_T("退出Boot失败，执行GetVersion命令"));
+					return FALSE;
 				break;
-			case DATA_ERR:
-				dlg->ShowInfo(_T("MAINSTART命令校验错误，重新发送"),i);
-				exitSign = FALSE;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
 				break;
-			default:
-				dlg->ShowInfo(_T("未定义的返回值"),0);
-				exitSign = FALSE;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
 				break;
 			}
 		}
 		else
 		{
 			//超时，提示并退出			
-#ifdef _TEST
-			exitSign = TRUE;
-#else
-			dlg->ShowErrMessageBox(_T("连接失败"));
-			return -1;
-#endif
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
 		}
 
-	} while (i<10 && !exitSign);
+	} while (i < RETRY_TIMES && !exitSign );
 
-	if (i==10&&exitSign==FALSE)
+	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//连接不稳定，退出
-		dlg->ShowErrMessageBox(_T("连接不稳定"));
-		return DATA_ERR;
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
 	}
-	dlg->ShowInfo(_T("BootLoader完成"),0);
+}
+
+BOOL CMFCApplication3Dlg::OrderGetVersion()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	do 
+	{
+		i++;
+		if(!GenerateSendOrder(ORDER_GETVERSION,0,NULL))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData2))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
+		{
+			//收到数据，判断数据是否正确
+			switch(receiceData->returnValue)
+			{
+				case GETVERSION_OK:
+					strListInfo.Format(_T("BootLoader版本为:%d.%d"),receiceData->allData[3],receiceData->allData[4]);
+					ShowInfo(strListInfo);
+					return TRUE;
+				break;
+				case GETVERSION_NOTOK:
+					ShowInfo(_T("获取BootLoader版本失败"));
+					return FALSE;
+				break;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
+				break;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
+				break;
+			}
+		}
+		else
+		{
+			//超时，提示并退出			
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
+		}
+
+	} while (i < RETRY_TIMES && !exitSign );
+
+	if ((i == RETRY_TIMES) && !exitSign)
+	{
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
+	}
+}
+
+BOOL CMFCApplication3Dlg::OrderMainStart()
+{
+	int i = 0;
+	BOOL exitSign = FALSE;
+	CString strListInfo;
+	do 
+	{
+		i++;
+		if(!GenerateSendOrder(
+				ORDER_MAINSTART,
+				0,
+				NULL,
+				fileToWrite->GetMainStartAddr()))
+		{
+			return FALSE;
+		}
+
+		if(!SendOrder(sendData2))
+		{
+			return FALSE;
+		}
+				
+		if(ReceiveOrderInMs(ACK_TIMEOUT) == TRUE)
+		{
+			//收到数据，判断数据是否正确
+			switch(receiceData->returnValue)
+			{
+				case MAINSTART_OK:
+					ShowInfo(_T("主函数进入成功"));
+					return TRUE;
+				break;
+				case MAINSTART_NOTOK:
+					ShowInfo(_T("主函数进入不成功"));
+					return FALSE;
+				break;
+				case DATA_ERR:
+					strListInfo.Format(_T("数据传输校验错误,正在进行第%d次重试"),i);
+					ShowInfo(strListInfo);
+					exitSign = FALSE;
+				break;
+				default:
+					ShowInfo(_T("未定义的返回值"));
+					exitSign = FALSE;
+				break;
+			}
+		}
+		else
+		{
+			//超时，提示并退出			
+			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			return FALSE;
+		}
+
+	} while (i < RETRY_TIMES && !exitSign );
+
+	if ((i == RETRY_TIMES) && !exitSign)
+	{
+		//dlg->ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("多次重试失败，请重新操作"));
+		return FALSE;
+	}
+}
+
+
+UINT CMFCApplication3Dlg::SendThread( void *param )
+{
+	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
+
+	int j;
+	UCHAR state = 0;//记录当前thread运行的state
+	UCHAR orderList[10];//
+	//记录烧写时间
+	CString str;
+	long tickStart=0;
+	long tickEnd=0;
+
+	tickStart = GetTickCount();
+
+	memset(orderList, 0, sizeof(orderList)*sizeof(UCHAR));
+
+	if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck())//擦除并编程
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_ERASE;
+		orderList[3] = ORDER_PROGRAM;
+		orderList[4] = ORDER_BOOTEND;
+		orderList[5] = ORDER_GETVERSION;
+		if(((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())//从main开始执行
+		{
+			orderList[6] = ORDER_MAINSTART;
+		}
+	}
+	else if(((CButton *)dlg->GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck())//只写数据
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_SPERASE;
+		orderList[3] = ORDER_PROGDATA;
+		orderList[4] = ORDER_BOOTEND;
+		orderList[5] = ORDER_GETVERSION;
+		if(((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())//从main开始执行
+		{
+			orderList[6] = ORDER_MAINSTART;
+		}
+	}
+	else if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())//擦除FLASH
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_ERASE;
+		orderList[3] = ORDER_BOOTEND;
+		orderList[4] = ORDER_GETVERSION;
+	}
+	//启用密码从BOOT命令开始
+	if( ((CComboBox*)dlg->GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel() == 0)
+	{
+		j = 0;
+		state = orderList[j++];
+	}
+	else //禁用密码从KEY命令开始
+	{
+		j = 1;
+		state = orderList[j++];
+	}
+
+	while(state != 0)
+	{
+		dlg->sendThreadState = state;
+		//发送Boot
+		if(state == ORDER_BOOT)
+		{
+			state = (dlg->OrderBoot())? orderList[j++]:0;
+		}
+		else if(state == ORDER_KEY)
+		{
+			state = (dlg->OrderKey())? orderList[j++]:0;
+		}
+		else if(state == ORDER_ERASE)
+		{
+			state = (dlg->OrderErase())? orderList[j++]:0;
+		}
+		else if(state == ORDER_SPERASE)
+		{
+			state = (dlg->OrderSPErase())? orderList[j++]:0;
+		}
+		else if(state == ORDER_PROGRAM)
+		{
+			state = (dlg->OrderProgram())? orderList[j++]:0;
+		}
+		else if(state == ORDER_PROGDATA)
+		{
+			state = (dlg->OrderProgData())? orderList[j++]:0;
+		}
+		else if(state == ORDER_GETVERSION)
+		{
+			state = (dlg->OrderGetVersion())? orderList[j++]:0;
+		}
+		else if(state == ORDER_BOOTEND)
+		{
+			state = (dlg->OrderBootEnd())? orderList[j++]:0;
+		}
+		else if(state == ORDER_MAINSTART)
+		{
+			state = (dlg->OrderMainStart())? orderList[j++]:0;
+		}
+	}		
+
+	dlg->GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(TRUE);
+
+	state = orderList[j-2];
+	if(ORDER_GETVERSION == state || ORDER_MAINSTART == state)
+	{
+		//记录烧写时间
+		float timeUsed = 0;
+		tickEnd = GetTickCount();
+		if(tickEnd < tickStart)
+		{
+			timeUsed = (0xFFFFFFFF + tickEnd-tickStart)/1000.0;
+		}
+		else
+		{
+			timeUsed = (tickEnd-tickStart)/1000.0;
+		}
+		
+		if(ORDER_ERASE == orderList[j-4])
+		{
+			str.Format(_T("擦除共用时间: %.3fs"),(tickEnd-tickStart)/1000.0);
+		}
+		else
+		{
+			str.Format(_T("烧写共用时间: %.3fs 数据传输速度: %dKbps"),timeUsed, (DWORD)((dlg->canFrameCount * 64.0)/timeUsed/1000.0));
+		}
+		dlg->ShowInfo(str);
+	}
+	//关闭打开的文件
+	if (NULL!=dlg->fileToWrite)
+	{
+		dlg->fileToWrite->Close();
+		delete dlg->fileToWrite;
+		dlg->fileToWrite=NULL;
+	}
+	dlg->canFrameCount = 0;
+	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
 	return 0;
+}
+
+
+void CMFCApplication3Dlg::OnClose()
+{
+	// TODO:
+	//MessageBox(_T("就要关闭我了，好怕怕"),MB_OK);
+	DisConnectCan();
+	CDialogEx::OnClose();
 }

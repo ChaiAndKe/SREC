@@ -11,7 +11,9 @@
 （比如0x01000010,0x01000018）。
 6.地址按照小端模式，数据区按照srec的顺序来,比如0x11223344，发送的时候地址区第一个字节填44，第二个填33
 /************************************************************************/
-#pragma once
+#ifndef _ANALYSISFILE_H
+#define _ANALYSISFILE_H
+
 #include "afx.h"
 #include "header.h"
 class CAnalysisFile : public CStdioFile
@@ -30,6 +32,11 @@ private:
 	BOOL sendAllData;//全局有效，是否发送全部数据
 	UINT dataToSendStartAddr;//全局，写数据的起始地址
 	UINT dataToSendStopAddr;//全局，写数据的结束地址
+
+	int dataToSendStartLineNum;//全局，写数据的起始行
+	int dataToSendStopLineNum;//全局，写数据的结束行
+	int curLineNum;//当前行号
+
 	UCHAR sendLength;//经过判断以后当前行应当发送的数据长度（在范围内）
 	UCHAR sendStartPosition;//经过判断以后当前行应当发送的数据在lineData指针中的起始位置
 	UINT sendStartAddr;//经过判断以后当前行发送出去的数据的首地址
@@ -82,3 +89,5 @@ public:
 };
 
 EXTERN_C char strTobin(char a);
+
+#endif

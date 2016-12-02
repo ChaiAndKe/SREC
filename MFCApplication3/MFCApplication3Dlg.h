@@ -6,6 +6,7 @@
 #include "header.h"
 #include "testlistbox.h"
 #include "AnalysisFile.h"
+#include "afxcmn.h"
 
 // CMFCApplication3Dlg 对话框
 class CMFCApplication3Dlg : public CDialogEx
@@ -35,16 +36,29 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-	//待实现函数
 	int ConnectCan(int canType,int channel,int baudRate);
-	int DisConnectCan(int canType,int channel,int baudRate);
-	void SendOrder(const BaseType *d);
+	int DisConnectCan();
+	BOOL SendOrder(const BaseType *d);
+	BOOL ReceiveOrderInMs(UINT timeOut);
+
+public:
+	BOOL OrderBoot();
+	BOOL OrderKey();
+	BOOL OrderErase();//for Erase
+	BOOL OrderSPErase();//for erase
+	BOOL OrderProgram();
+	BOOL OrderProgData();
+	BOOL OrderBootEnd();
+	BOOL OrderGetVersion();
+	BOOL OrderMainStart();
 	
 public:
 	//全局函数
-	void ShowInfo(CString str, int code);
+	void ShowInfo(CString str, int index = -1);
+	void ShowProgress(int percent);
 	void ShowErrMessageBox(CString err);
 	BOOL GenerateSendOrder(char order,UCHAR len,const UCHAR *d,UINT addr=0);
+	
 
 private:
 	BOOL CStringToUINT(const CString &str,UINT& d,CString mess);//地址转换成UINT格式
@@ -67,21 +81,28 @@ public:
 	BaseType* sendData1;
 	BaseType* sendData2;
 
-	HANDLE receiveEvent;
-	HANDLE exitEvent1;
-	HANDLE exitEvent2;
+	//HANDLE receiveEvent;
+	//HANDLE exitEvent1;
+	//HANDLE exitEvent2;
+	
+	volatile BOOL isTransmitOK;
+	DWORD canFrameCount;
+	UCHAR sendThreadState;
 
 	int m_startFromMain;//是否从main开始启动
 
 public:
 	//线程
-	static UINT ReceiveThread(void *param);
-	static UINT SendThreadErase(void *param);
-	static UINT SendThreadProgram(void *param);
+	//static UINT ReceiveThread(void *param);
+	//static UINT SendThreadErase(void *param);
+	//Sstatic UINT SendThreadProgram(void *param);
+	static UINT SendThread( void *param );
 
 public:
 	//status bar
 	HWND hStatusWindow;
+	CStatusBar m_StatusBar;
+	CProgressCtrl m_ProgressState;
 
 public:
 	afx_msg void OnMenuExit();
@@ -95,5 +116,6 @@ public:
 	afx_msg void OnBnClickedRadioEraseandprogram();
 	afx_msg void OnCbnSelchangeComboEncryption();
 	afx_msg void OnBnClickedButtonTest();
+	afx_msg void OnClose();
 };
 

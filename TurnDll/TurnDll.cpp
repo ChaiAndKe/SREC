@@ -24,5 +24,5 @@ TURNDLL_API char strTobin( char a )
 
 TURNDLL_API UINT CalculateKey(UINT a)
 {
-	return a;
+	return a*a + a + 1;
 }

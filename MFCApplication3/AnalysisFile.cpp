@@ -15,6 +15,9 @@ CAnalysisFile::CAnalysisFile(LPCTSTR lpszFileName)
 	sendAllData = TRUE;
 	dataToSendStartAddr = 0;
 	dataToSendStopAddr = 0;
+	curLineNum = 0;
+	dataToSendStartLineNum = 0;
+	dataToSendStopLineNum = 0;
 	sendLength = 0;
 	sendStartPosition = 0;
 	sendStartAddr = 0;
@@ -63,6 +66,21 @@ BOOL CAnalysisFile::SetArrange(BOOL sendAllData,UINT leftSide, UINT rightSide)//
 	dataToSendStartAddr = leftSide;
 	dataToSendStopAddr = rightSide;
 	IsSetArrange = TRUE;
+
+	curLineNum = 0;
+	if(ReadNextLine()==FILE_READ_END)
+	{
+		throw "设置的地址不在文件范围内，请检查！";
+		return FALSE;
+	}
+	dataToSendStartLineNum = curLineNum;
+	while (FILE_READ_NORMAL == ReadNextLine())
+		dataToSendStopLineNum = curLineNum;
+	if(dataToSendStopLineNum<dataToSendStartLineNum)
+		dataToSendStopLineNum=dataToSendStartLineNum;
+	SeekToBegin();
+	curLineNum = 0;
+
 	return TRUE;
 }
 
@@ -179,6 +197,7 @@ int CAnalysisFile::ReadAndTurn()
 		return FILE_READ_ERROR;
 	}
 	lineTotalLength = strLine.GetLength();
+	curLineNum++;
 
 	if (lineTotalLength==0)
 	{
@@ -334,13 +353,15 @@ UINT CAnalysisFile::GetMainStartAddr()
 }
 UCHAR CAnalysisFile::GetSendedPercent()
 {
-	if (sendAllData)
+	if (curLineNum>dataToSendStopLineNum)
 	{
-		sendedPercent =(UCHAR)(GetPosition()*100/fileLength);
+		return 100;
 	}
-	else{
-		sendedPercent = (UCHAR)(sendedLength*100/(dataToSendStopAddr-dataToSendStartAddr+1));
-	}
+	int l_ = curLineNum-dataToSendStartLineNum+1;
+	int m_ = dataToSendStopLineNum-dataToSendStartLineNum+1;
+	l_ = l_<0?0:l_;
+	m_ = m_<1?1:m_;
+	sendedPercent = l_*100/m_;
 	return sendedPercent;
 }
 
