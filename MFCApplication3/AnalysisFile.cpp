@@ -68,7 +68,8 @@ BOOL CAnalysisFile::SetArrange(BOOL sendAllData,UINT leftSide, UINT rightSide)//
 	IsSetArrange = TRUE;
 
 	curLineNum = 0;
-	ReadNextLine();
+	if(ReadNextLine()==FILE_READ_END)
+		return FALSE;
 	dataToSendStartLineNum = curLineNum;
 	while (FILE_READ_NORMAL == ReadNextLine())
 		dataToSendStopLineNum = curLineNum;
@@ -349,6 +350,10 @@ UINT CAnalysisFile::GetMainStartAddr()
 }
 UCHAR CAnalysisFile::GetSendedPercent()
 {
+	if (curLineNum>dataToSendStopLineNum)
+	{
+		return 100;
+	}
 	int l_ = curLineNum-dataToSendStartLineNum+1;
 	int m_ = dataToSendStopLineNum-dataToSendStartLineNum+1;
 	l_ = l_<0?0:l_;
