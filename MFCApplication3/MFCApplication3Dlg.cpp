@@ -1473,6 +1473,9 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 							ShowInfo(strListInfo);
 							exitSign = FALSE;
 						break;
+						case ADDRALIGN_ERR:
+							ShowInfo(_T("文件地址对齐错误，无法写入"));
+						break;
 					}
 				}
 				else
@@ -1573,6 +1576,9 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 							strListInfo.Format(_T("本帧数据烧写失败，正在第%d次重试"), i);
 							ShowInfo(strListInfo);
 							exitSign = FALSE;
+						break;
+						case ADDRALIGN_ERR:
+							ShowInfo(_T("文件地址对齐错误，无法写入"));
 						break;
 					}
 				}
@@ -1847,9 +1853,16 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		orderList[4] = ORDER_GETVERSION;
 	}
 	//启用密码从BOOT命令开始
-	j = 0;
-	state = orderList[j++];
-	//禁用密码从KEY命令开始
+	if( ((CComboBox*)dlg->GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel() == 0)
+	{
+		j = 0;
+		state = orderList[j++];
+	}
+	else //禁用密码从KEY命令开始
+	{
+		j = 1;
+		state = orderList[j++];
+	}
 
 	while(state != 0)
 	{
