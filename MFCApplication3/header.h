@@ -1,9 +1,12 @@
-#ifndef HEADER_H
-#define HEADER_H
+#ifndef _HEADER_H
+#define _HEADER_H
 
 #if 0
 #define _TEST
 #endif
+
+//#define _MONITOR
+#define _SIMULATOR
 
 #ifdef __cplusplus
 
@@ -23,7 +26,7 @@ const int FILE_ADDRESS_ERROR = 9;//行起始地址错误
 
 //通讯命令定义
 const UCHAR PASSWORD_OK = 0X01;
-const UCHAR PASSRORD_NOTOK = 0X11;
+const UCHAR PASSWORD_NOTOK = 0X11;
 const UCHAR KEY_OK = 0X02;
 const UCHAR KEY_NOTOK = 0X22;
 const UCHAR ERASE_OK = 0X03;
@@ -37,7 +40,11 @@ const UCHAR GETVERSION_OK = 0X06;
 const UCHAR GETVERSION_NOTOK = 0X66;
 const UCHAR BOOTEND_OK = 0X07;
 const UCHAR BOOTEND_NOTOK = 0X77;
-
+const UCHAR PROGDATA_OK = 0X08;
+const UCHAR PROGDATA_NOTOK = 0X88;
+const UCHAR SPERASE_OK = 0x09;
+const UCHAR SPERASE_NOTOK = 0x99;
+const UCHAR ADDRALIGN_ERR = 0x0A;
 //上位机到下位机的帧命令定义
 const UCHAR ORDER_BOOT = 'B';
 const UCHAR ORDER_KEY = 'K';
@@ -46,6 +53,8 @@ const UCHAR ORDER_PROGRAM = 'P';
 const UCHAR ORDER_GETVERSION = 'G';
 const UCHAR ORDER_MAINSTART = 'M';
 const UCHAR ORDER_BOOTEND = 'o';
+const UCHAR ORDER_PROGDATA = 'D';
+const UCHAR ORDER_SPERASE = 'e';
 
 //CAN连接参数定义
 const int USBCAN_II = 0;
@@ -60,8 +69,19 @@ const int _250KBPS = 2;
 const int _125KBPS = 3;
 const int _100KBPS = 4;
 
+const UINT MSGID_FARME1 = 1;
+const UINT MSGID_FARME2[3] = {1, 2, 3};
+const UINT MSGID_FRAMEREV = 0;
+const DWORD ACK_TIMEOUT = 3000;//等下位机回令超时阈值
+const UINT RETRY_TIMES = 3;//重试次数
+
 //CAN错误定义
 const int CAN_CONNECT_OK = 0;
+const int CAN_OPENDEV_ERROR = 1;//打开设备失败
+const int CAN_INITDEV_ERROR = 2;//初始化CAN失败
+const int CAN_STARTDEV_ERROR = 3;//启动CAN失败
+const int CAN_SETFILTER_ERROR = 4;//设置滤波失败 for USBCAN－2E
+
 const int CAN_CONNECT_NOTOK = 1;
 const int CAN_DISCONNECT_OK = 0;
 const int CAN_DISCONNECT_NOTOK = 1;
@@ -141,23 +161,54 @@ public:
 	UCHAR m_check;
 	UCHAR* allData;//发送和接受的数据都在这里
 	UINT random;
+	UINT returnData;//返回的数据转换成UINT类型，默认地位在前
 
 private:
 	BaseType();
 
 public:
 	BaseType(UCHAR totalLength){
-		startSign = '$';command = 0;returnValue = 0;m_check = 0;dataLength = 0;
+		//startSign = '$'; //modified by kexf
+		command = 0;returnValue = 0;m_check = 0;dataLength = 0;
+		returnData=0;
 
 		this->totalLength = totalLength;
 		allData = new UCHAR[totalLength];
 		memset(allData,0x00,totalLength*sizeof(UCHAR));
 	}
 public:
-	UCHAR CalculateCheck()
+	/*
+	UCHAR GetCheck()
 	{
 		UCHAR l_check = 0;
-		for (UCHAR i=1;i<totalLength-(16-dataLength)-1;i++)
+		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}*/
+	UCHAR Calculate_Check()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}
+	UCHAR Calculate_7BitCheck()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-1;i++)
+		{
+			l_check += allData[i];
+		}
+		return l_check;
+	}
+	UCHAR Calculate_23BitCheck()
+	{
+		UCHAR l_check = 0;
+		for (UCHAR i=1;i<totalLength-1;i++)
 		{
 			l_check += allData[i];
 		}
@@ -173,12 +224,16 @@ public:
 		{
 			allData[i]=d[i];
 		}
+		/*
+		returnData = allData[3]|(allData[4]<<8)|(allData[5]<<16)|(allData[6]<<24);
+		
 		if (d[0]==0xA5)
 		{
 			returnValue = d[1];
 			dataLength = d[2];
 			m_check=d[7];
-		}
+		}*/
+		return 0;
 	}
 
 public:
@@ -198,12 +253,12 @@ public:
 		allData[0] = '$';
 		allData[1] = command;
 		allData[2] = length;
-		allData[3] = data;
-		allData[4] = data>>8;
-		allData[5] = data>>16;
-		allData[6] = data>>24;
+		allData[3] = data>>24;
+		allData[4] = data>>16;
+		allData[5] = data>>8;
+		allData[6] = data;
 
-		allData[7] = CalculateCheck();
+		allData[7] = Calculate_7BitCheck();
 		
 		return TRUE;
 	}
@@ -221,10 +276,16 @@ public:
 
 		allData[0] = '$';
 		allData[1] = command;
+		/*//little endian
 		allData[3] = addr;
 		allData[4] = addr>>8;
 		allData[5] = addr>>16;
-		allData[6] = addr>>24;
+		allData[6] = addr>>24;*/
+		//big endian
+		allData[3] = addr>>24;
+		allData[4] = addr>>16;
+		allData[5] = addr>>8;
+		allData[6] = addr;
 
 		for (UCHAR i=0;i<length;i++)
 		{
@@ -242,7 +303,7 @@ public:
 		allData[2] = length;
 		this->dataLength = length;
 
-		allData[totalLength-1] = CalculateCheck();
+		allData[totalLength-1] = Calculate_23BitCheck();
 		return TRUE;
 	}
 };

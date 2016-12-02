@@ -22,7 +22,6 @@ Thumbs.db
 ipch/
 [Bb]in
 [Dd]ebug*/
-*.lib
 *.sbr
 obj/
 [Rr]elease*/
@@ -30,3 +29,5 @@ _ReSharper*/
 [Tt]est[Rr]esult*
 *.vssscc
 $tf*/
+MFCApplication3/bootcfg.ini
+MFCApplication3/bootcfg.ini

@@ -68,6 +68,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>Bootloader</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -182,6 +183,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AnalysisFile.h" />
+    <ClInclude Include="ControlCAN.H" />
     <ClInclude Include="header.h" />
     <ClInclude Include="MFCApplication3.h" />
     <ClInclude Include="MFCApplication3Dlg.h" />
