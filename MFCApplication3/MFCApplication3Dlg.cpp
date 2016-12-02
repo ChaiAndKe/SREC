@@ -1475,6 +1475,7 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 						break;
 						case ADDRALIGN_ERR:
 							ShowInfo(_T("文件地址对齐错误，无法写入"));
+							return FALSE;
 						break;
 					}
 				}
@@ -1579,6 +1580,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 						break;
 						case ADDRALIGN_ERR:
 							ShowInfo(_T("文件地址对齐错误，无法写入"));
+							return FALSE;
 						break;
 					}
 				}
