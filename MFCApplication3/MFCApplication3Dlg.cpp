@@ -145,7 +145,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	m_StatusBar.SetPaneInfo(0,arr[0],0,rect.Width()/2);
 	m_StatusBar.SetPaneText(0,_T("CAN口未连接"));
 
-	m_StatusBar.SetPaneInfo(1,arr[1],0,50);
+	m_StatusBar.SetPaneInfo(1,arr[1],0,60);
 	m_StatusBar.SetPaneText(1,_T("下载0%"));
 
 	m_StatusBar.SetPaneInfo(2,arr[2],0,(rect.Width()/2)-150);
@@ -177,6 +177,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->EnableWindow(FALSE);
 
 	m_Connect = FALSE;
+	canFrameCount = 0;
 
 	//接收和发送数据缓冲区
 	receiceData = new BaseType(8);
@@ -470,13 +471,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			return;
 		}
 
-		ShowProgress(0);
-		m_ListInfo.ResetContent();
+
 	}
-
 	//启动线程
-
+	ShowProgress(0);
+	m_ListInfo.ResetContent();
 	AfxBeginThread(SendThread,this);
+	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
 	/*
 	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
@@ -687,16 +688,22 @@ void CMFCApplication3Dlg::ShowProgress(int percent)
 }
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
 {
+	CString strInfo;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	strInfo.Format(_T("%d-%d-%d %d:%d:%d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
+	//strInfo = strTime + str;
+	strInfo = str;
 	if(index == -1)//在m_ListInfo末尾插入
 	{
-		m_ListInfo.InsertString(m_ListInfo.GetCount(),str);
-		//m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
+		m_ListInfo.InsertString(m_ListInfo.GetCount(),strInfo);
+		m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
 	}
 	else
 	{
 		m_ListInfo.DeleteString(index);
-		m_ListInfo.InsertString(index, str);
-		//m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
+		m_ListInfo.InsertString(index, strInfo);
+		m_ListInfo.SetCurSel(m_ListInfo.GetCount()-1);
 	}
 }
 void CMFCApplication3Dlg::ShowErrMessageBox(CString err)
@@ -782,10 +789,14 @@ BOOL CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 		{
 			canframe[0].ID = MSGID_FARME1;//帧格式1 ID
 			memcpy(canframe[0].Data, sendframe->allData, 8);
+
 			isTransmitOK = FALSE;
+			VCI_ClearBuffer(m_devtype, m_devind, m_cannum);//发送之前清除接收buffer
+
 			if(1 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 1))//发送成功
 			{
 				isTransmitOK = TRUE;
+				canFrameCount += 2;
 
 #ifdef _MONITOR
 				CString str,tmpstr;
@@ -829,9 +840,12 @@ BOOL CMFCApplication3Dlg::SendOrder(const BaseType *sendframe)
 			memcpy(canframe[2].Data, &(sendframe->allData[2*8]), 8);
 			
 			isTransmitOK = FALSE;
+			VCI_ClearBuffer(m_devtype, m_devind, m_cannum);//发送之前清除接收buffer
+
 			if(3 == VCI_Transmit(m_devtype, m_devind, m_cannum, canframe, 3))//发送成功
 			{
 				isTransmitOK = TRUE;
+				canFrameCount += 4;
 #ifdef _MONITOR
 				CString str,tmpstr;
 				for(int i = 0; i < 3; i++)
@@ -873,7 +887,7 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	UINT waitTick = 0;
 
 #ifdef _SIMULATOR
-	Sleep(1);
+		Sleep(1);
 #endif
 
 	while(isTransmitOK != TRUE);
@@ -988,9 +1002,9 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 		}
 #endif
 #ifdef _SIMULATOR
-		static int FrameNum = 0;// for frame type 2
-		static BOOL FrameStart = FALSE;// for frame type 2
-		static UCHAR FrameOrder = 0;
+		int FrameNum = 0;// for frame type 2
+		BOOL FrameStart = FALSE;// for frame type 2
+		UCHAR FrameOrder = 0;
 		for(i = 0;i < len; i++)
 		{
 			if(FrameStart)// for frame type 2
@@ -1035,72 +1049,75 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 					//SetEvent(receiveEvent);//设置接收事件
 				}
 			}
-			if(ORDER_BOOT == frameinfo[i].Data[1])
+			else
 			{
-				receiceData->returnValue = PASSWORD_OK;
-				return TRUE;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_KEY == frameinfo[i].Data[1])
-			{
-				receiceData->returnValue = KEY_OK;
-				return TRUE;
-				//SetEvent(receiveEvent);//设置接收事件
-			}
-			else if(ORDER_ERASE == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_ERASE;
-				//dlg->receiceData->returnValue = ERASE_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_PROGRAM == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_PROGRAM;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_GETVERSION == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_GETVERSION;
-				//dlg->receiceData->returnValue = GETVERSION_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_MAINSTART == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_MAINSTART;
-				//dlg->receiceData->returnValue = MAINSTART_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_BOOTEND == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_BOOTEND;
-				//dlg->receiceData->returnValue = BOOTEND_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_PROGDATA == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_PROGDATA;
-				//dlg->receiceData->returnValue = BOOTEND_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
-			}
-			else if(ORDER_SPERASE == frameinfo[i].Data[1])
-			{
-				FrameStart = TRUE;
-				FrameNum = 1;
-				FrameOrder = ORDER_SPERASE;
-				//dlg->receiceData->returnValue = BOOTEND_OK;
-				//SetEvent(dlg->receiveEvent);//设置接收事件
+				if(ORDER_BOOT == frameinfo[i].Data[1])
+				{
+					receiceData->returnValue = PASSWORD_OK;
+					return TRUE;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_KEY == frameinfo[i].Data[1])
+				{
+					receiceData->returnValue = KEY_OK;
+					return TRUE;
+					//SetEvent(receiveEvent);//设置接收事件
+				}
+				else if(ORDER_ERASE == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_ERASE;
+					//dlg->receiceData->returnValue = ERASE_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_PROGRAM == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_PROGRAM;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_GETVERSION == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_GETVERSION;
+					//dlg->receiceData->returnValue = GETVERSION_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_MAINSTART == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_MAINSTART;
+					//dlg->receiceData->returnValue = MAINSTART_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_BOOTEND == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_BOOTEND;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_PROGDATA == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_PROGDATA;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
+				else if(ORDER_SPERASE == frameinfo[i].Data[1])
+				{
+					FrameStart = TRUE;
+					FrameNum = 1;
+					FrameOrder = ORDER_SPERASE;
+					//dlg->receiceData->returnValue = BOOTEND_OK;
+					//SetEvent(dlg->receiveEvent);//设置接收事件
+				}
 			}
 		}
 #endif	
@@ -1392,6 +1409,7 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 				
 				if(!SendOrder(sendData2))
 				{
+					//ShowInfo(_T("发送命令失败"));
 					return FALSE;
 				}
 
@@ -1405,20 +1423,26 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 							ShowProgress(fileToWrite->GetSendedPercent());
 #ifndef _MONITOR
 							/*
-							if(frameNum % 4 == 0) tmp = "正在烧写.";
-							else if(frameNum % 4 == 1) tmp = "正在烧写..";
-							else if(frameNum % 4 == 2) tmp = "正在烧写...";
-							else if(frameNum % 4 == 3) tmp = "正在烧写....";*/
-							strListInfo = "正在烧写....";
-						
+							if(frameNum % 4 == 0) strListInfo = "正在烧写.";
+							else if(frameNum % 4 == 1) strListInfo = "正在烧写..";
+							else if(frameNum % 4 == 2) strListInfo = "正在烧写...";
+							else if(frameNum % 4 == 3) strListInfo = "正在烧写....";
 							if(!startProgram)
 							{
 								listIndex = m_ListInfo.GetCount();
 								startProgram = TRUE;
-								ShowInfo(strListInfo, listIndex);
 							}
-							//dlg->ShowInfo(tmp, listIndex);
-							//frameNum++;
+							ShowInfo(strListInfo, listIndex);
+							frameNum++;
+							*/
+							
+							if(!startProgram)
+							{
+								strListInfo = "正在烧写....";
+								ShowInfo(strListInfo);
+								startProgram = TRUE;
+							}
+
 #endif
 						break;
 						case PROGRAM_NOTOK:
@@ -1797,8 +1821,8 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		orderList[0] = ORDER_BOOT;
 		orderList[1] = ORDER_KEY;
 		orderList[2] = ORDER_ERASE;
-		orderList[4] = ORDER_BOOTEND;
-		orderList[5] = ORDER_GETVERSION;
+		orderList[3] = ORDER_BOOTEND;
+		orderList[4] = ORDER_GETVERSION;
 	}
 	//启用密码从BOOT命令开始
 	j = 0;
@@ -1853,10 +1877,31 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 	dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(TRUE);
 	dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(TRUE);
 
-	//记录烧写时间
-	tickEnd = GetTickCount();
-	str.Format(_T("烧写共用时间: %.3fs"),(tickEnd-tickStart)/1000.0);
-	dlg->ShowInfo(str);
+	state = orderList[j-2];
+	if(ORDER_GETVERSION == state || ORDER_MAINSTART == state)
+	{
+		//记录烧写时间
+		float timeUsed = 0;
+		tickEnd = GetTickCount();
+		if(tickEnd < tickStart)
+		{
+			timeUsed = (0xFFFFFFFF + tickEnd-tickStart)/1000.0;
+		}
+		else
+		{
+			timeUsed = (tickEnd-tickStart)/1000.0;
+		}
+		
+		if(ORDER_ERASE == orderList[j-4])
+		{
+			str.Format(_T("擦除共用时间: %.3fs"),(tickEnd-tickStart)/1000.0);
+		}
+		else
+		{
+			str.Format(_T("烧写共用时间: %.3fs 数据传输速度: %dKbps"),timeUsed, (DWORD)((dlg->canFrameCount * 64.0)/timeUsed/1000.0));
+		}
+		dlg->ShowInfo(str);
+	}
 	//关闭打开的文件
 	if (NULL!=dlg->fileToWrite)
 	{
@@ -1864,6 +1909,8 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		delete dlg->fileToWrite;
 		dlg->fileToWrite=NULL;
 	}
+	dlg->canFrameCount = 0;
+	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
 	return 0;
 }
 
