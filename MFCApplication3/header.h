@@ -6,7 +6,7 @@
 #endif
 
 //#define _MONITOR
-//#define _SIMULATOR
+#define _SIMULATOR
 
 #ifdef __cplusplus
 
