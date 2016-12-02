@@ -465,9 +465,16 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			return;
 		}*/
 		//设置边界
-		if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
+		try{
+			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
+			{
+				AfxMessageBox(_T("地址设置错误，请重试！"));
+				return;
+			}
+		}catch(char *s)
 		{
-			AfxMessageBox(_T("地址设置错误，请重试！"));
+			CString tmp(s);
+			AfxMessageBox(tmp);
 			return;
 		}
 

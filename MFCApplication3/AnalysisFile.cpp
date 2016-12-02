@@ -69,7 +69,10 @@ BOOL CAnalysisFile::SetArrange(BOOL sendAllData,UINT leftSide, UINT rightSide)//
 
 	curLineNum = 0;
 	if(ReadNextLine()==FILE_READ_END)
+	{
+		throw "设置的地址不在文件范围内，请检查！";
 		return FALSE;
+	}
 	dataToSendStartLineNum = curLineNum;
 	while (FILE_READ_NORMAL == ReadNextLine())
 		dataToSendStopLineNum = curLineNum;
