@@ -1,5 +1,5 @@
-#ifndef HEADER_H
-#define HEADER_H
+#ifndef _HEADER_H
+#define _HEADER_H
 
 #if 0
 #define _TEST
