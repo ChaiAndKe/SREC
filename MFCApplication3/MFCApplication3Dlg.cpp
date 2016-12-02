@@ -886,10 +886,6 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	long endTick = 0;
 	UINT waitTick = 0;
 
-#ifdef _SIMULATOR
-		Sleep(1);
-#endif
-
 	while(isTransmitOK != TRUE);
 	if(FALSE == m_Connect)
 	{
@@ -902,10 +898,28 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	while(waitTick < timeOut)//读CAN缓冲区超时判断
 	{
 		receiveBufLen = VCI_GetReceiveNum(m_devtype,m_devind,m_cannum);
+#ifdef _SIMULATOR
+		if(sendThreadState == ORDER_BOOT || sendThreadState == ORDER_KEY)
+		{
+			if(receiveBufLen > 0)
+			{
+				break;
+			}
+		}
+		else
+		{
+			if(receiveBufLen == 3)
+			{
+				break;
+			}
+		}
+#else
 		if(receiveBufLen > 0) 
 		{
 			break;
 		}
+#endif
+
 		endTick = GetTickCount();
 		if(endTick < startTick)
 		{
@@ -918,6 +932,7 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 	}
 	if(receiveBufLen <= 0)
 	{
+		//ShowInfo(_T("receiveBufLen <= 0"));
 		return FALSE;
 	}
 	/*
@@ -934,9 +949,9 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 		//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
 		//千万不能省略这一步（即使你可能不想知道错误码是什么）
 		VCI_ReadErrInfo(m_devtype, m_devind, m_cannum, &errinfo);
+		//ShowInfo(_T("len <= 0"));
 		return FALSE;
 	}
-
 	else
 	{
 #ifndef _SIMULATOR
@@ -1049,7 +1064,7 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 					//SetEvent(receiveEvent);//设置接收事件
 				}
 			}
-			else
+			else if(FrameStart == FALSE && ('$' == frameinfo[i].Data[0]))
 			{
 				if(ORDER_BOOT == frameinfo[i].Data[1])
 				{
@@ -1831,6 +1846,7 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 
 	while(state != 0)
 	{
+		dlg->sendThreadState = state;
 		//发送Boot
 		if(state == ORDER_BOOT)
 		{
