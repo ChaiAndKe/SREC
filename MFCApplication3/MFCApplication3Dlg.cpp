@@ -120,19 +120,21 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 
 #ifdef _DEBUG
-	SetWindowText(_T("BootLoader通信_DEBUG_MODE"));
+	SetWindowText(_T("BootLoader_DEBUG_MODE"));
 	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
+	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 #else
-	SetWindowText(_T("BootLoader通信"));
+	SetWindowText(_T("BootLoader"));
 	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T(""));
 #endif
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 
 	//加载菜单栏
+	/*
 	m_Menu.LoadMenuW(IDR_MENU1);
 	SetMenu(&m_Menu);
 	DrawMenuBar();
-
+	*/
 
 	//设置状态栏
 
@@ -376,7 +378,10 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//擦除			boot,key,erase,boot_end,get_version
 	//只写数据		boot,key,program,boot_end,get_version
 	//擦除并编程  boot,key,program,boot_end,get_version
-
+	
+	//清空ListInfo和进度条
+	ShowProgress(0);
+	m_ListInfo.ResetContent();
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
@@ -493,8 +498,6 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 
 	}
 	//启动线程
-	ShowProgress(0);
-	m_ListInfo.ResetContent();
 	AfxBeginThread(SendThread,this);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
 	/*
