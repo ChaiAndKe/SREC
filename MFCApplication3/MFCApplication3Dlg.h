@@ -117,5 +117,6 @@ public:
 	afx_msg void OnCbnSelchangeComboEncryption();
 	afx_msg void OnBnClickedButtonTest();
 	afx_msg void OnClose();
+	afx_msg void OnBnClickedCheckDefaultpassword();
 };
 

@@ -82,6 +82,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO_ENCRYPTION, &CMFCApplication3Dlg::OnCbnSelchangeComboEncryption)
 	ON_BN_CLICKED(IDC_BUTTON_TEST, &CMFCApplication3Dlg::OnBnClickedButtonTest)
 	ON_WM_CLOSE()
+	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
 END_MESSAGE_MAP()
 
 
@@ -121,10 +122,10 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 #ifdef _DEBUG
 	SetWindowText(_T("BootLoader通信_DEBUG_MODE"));
 	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x00000000"));
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 #else
 	SetWindowText(_T("BootLoader通信"));
-	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
+	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T(""));
 #endif
 
 	//加载菜单栏
@@ -508,9 +509,9 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 {
 	int strLength = str.GetLength();
-	if (strLength!=10)
+	if (strLength!=8)
 	{
-		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
+		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位"),_T("警告"),MB_OK|MB_ICONWARNING);
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
@@ -543,6 +544,21 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 	d=addr[0]<<24|addr[1]<<16|addr[2]<<8|addr[3];
 
 	return TRUE;
+}
+
+void CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (((CButton *)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->GetCheck())
+	{
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(FALSE);
+	}
+	else
+	{
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T(""));
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
+	}
 }
 
 void CMFCApplication3Dlg::OnBnClickedRadioWritedata()
@@ -1984,3 +2000,4 @@ void CMFCApplication3Dlg::OnClose()
 	DisConnectCan();
 	CDialogEx::OnClose();
 }
+
