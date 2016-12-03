@@ -317,6 +317,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 			//set the status bar
 			m_StatusBar.SetPaneText(0,_T("CAN已连接"));
 			break;
+		case CAN_OPENDEV_ERROR:
+		case CAN_INITDEV_ERROR:
+		case CAN_STARTDEV_ERROR:
+		case CAN_SETFILTER_ERROR:
+			//MessageBox(_T("CAN连接失败"), _T("警告"), MB_OK);
+			MessageBox(_T("CAN连接失败!"), _T("警告"), MB_OK|MB_ICONWARNING);
+			break;
 
 		default:
 			//未知错误
@@ -384,7 +391,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	{
 		if (filePathName.IsEmpty())
 		{
-			AfxMessageBox(_T("请选择SREC文件"));
+			MessageBox(_T("请选择SREC文件"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return;
 		}else
 		{
@@ -400,15 +407,15 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			}
 			if (NULL==fileToWrite)
 			{
-				AfxMessageBox(_T("文件打开失败，请重试！"));
-				//ShowInfo(_T("文件打开失败，请重试！"));
+				//AfxMessageBox(_T("文件打开失败，请重试！"));
+				ShowInfo(_T("文件打开失败，请重试！"));
 				//ShowInfo(_T("退出BootLoader"));
 				return;
 			}
 			/*
 			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
 			{
-				AfxMessageBox(_T("文件格式错误，请检查！"));
+				MessageBox(_T("文件格式错误，请检查！"),_T("警告"),MB_OK|MB_ICONWARNING);
 				ShowInfo(_T("文件格式错误，请检查！"));
 				ShowInfo(_T("退出BootLoader"));
 				fileToWrite->Close();
@@ -436,7 +443,8 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		CString str;
 		if (!finder.FindFile(path))
 		{
-			AfxMessageBox(_T("未找到配置文件"));
+			//MessageBox(_T("未找到配置文件"),_T("警告"),MB_OK|MB_ICONWARNING);
+			ShowInfo(_T("未找到配置文件！"));
 			return;
 		}
 		else
@@ -452,14 +460,15 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,1,path);
 			if (stopAddress==1||startAddress==1)
 			{
-				AfxMessageBox(_T("地址读取错误，请检查"));
+				//MessageBox(_T("地址读取错误，请检查"),_T("警告"),MB_OK|MB_ICONWARNING);
+				ShowInfo(_T("地址读取错误，请检查！"));
 				return;
 			}
 		}
 		/*
 		if (startAddress%8!=0)
 		{
-			AfxMessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"));
+			MessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"),_T("警告"),MB_OK|MB_ICONWARNING);
 			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
 			ShowInfo(_T("退出BootLoader"));
 			return;
@@ -468,13 +477,15 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		try{
 			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
 			{
-				AfxMessageBox(_T("地址设置错误，请重试！"));
+				//MessageBox(_T("地址设置错误，请重试！"),_T("警告"),MB_OK|MB_ICONWARNING);
+				ShowInfo(_T("文件地址设置错误，请重新配置！"));
 				return;
 			}
 		}catch(char *s)
 		{
 			CString tmp(s);
-			AfxMessageBox(tmp);
+			//MessageBox(tmp,_T("警告"),MB_OK|MB_ICONWARNING);
+			ShowInfo(tmp);
 			return;
 		}
 
@@ -499,7 +510,7 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 	int strLength = str.GetLength();
 	if (strLength!=10)
 	{
-		AfxMessageBox(mess+_T("长度错误，请输入4字节地址，共计8位，以0x开头"));
+		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
@@ -518,7 +529,8 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 		{
 			addr[i] -= 0x57;
 		}else{
-			AfxMessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"));
+			//AfxMessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"));
+			MessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 	}	
@@ -628,14 +640,14 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 
 	if(VCI_OpenDevice(m_devtype, m_devind, 0) != STATUS_OK)
 	{
-		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK);
 		return CAN_OPENDEV_ERROR;
 	}
 	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to init the baud 
 	{
 		if (VCI_SetReference(m_devtype,m_devind, m_cannum, 0, &baud_E) != STATUS_OK)
 		{
-			MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK);
+			//MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK);
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_OPENDEV_ERROR;
 		}
@@ -643,20 +655,20 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
 		{
 			//MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
-			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK);
+			//MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK);
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_SETFILTER_ERROR;
 		}
 	}
 	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
 	{
-		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK);
 		VCI_CloseDevice(m_devtype, m_devind);
 		return CAN_INITDEV_ERROR;
 	}
 	if(VCI_StartCAN(m_devtype,m_devind,m_cannum) != 1)
 	{
-		MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
 		return CAN_STARTDEV_ERROR;
 	}
 	/*
@@ -696,10 +708,11 @@ void CMFCApplication3Dlg::ShowProgress(int percent)
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
 {
 	CString strInfo;
+	/*
 	SYSTEMTIME st;
 	GetLocalTime(&st);
-	strInfo.Format(_T("%d-%d-%d %d:%d:%d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
-	//strInfo = strTime + str;
+	strInfo.Format(_T("%d-%d-%d %2d:%2d:%2d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
+	strInfo += str;*/
 	strInfo = str;
 	if(index == -1)//在m_ListInfo末尾插入
 	{
@@ -1174,7 +1187,8 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 					return TRUE;
 				break;
 				case PASSWORD_NOTOK:
-					ShowErrMessageBox(_T("密码错误,请重新输入密码"));
+					//ShowErrMessageBox(_T("密码错误,请重新输入密码"));
+					MessageBox(_T("密码错误,请重新输入密码"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1191,7 +1205,8 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1199,8 +1214,7 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1235,7 +1249,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 					if (l_key != receiceData->returnData)
 					{
 						//KEY校验未通过，退出
-						//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+						//ShowErrMessageBox(_T("KEY校验错误"));
 						ShowInfo(_T("KEY校验错误"));
 						return  FALSE;
 					}
@@ -1247,7 +1261,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 					}
 				break;
 				case KEY_NOTOK:
-					//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+					//ShowErrMessageBox(_T("KEY校验错误"));
 					ShowInfo(_T("KEY校验错误"));
 					return FALSE;
 				break;
@@ -1265,7 +1279,8 @@ BOOL CMFCApplication3Dlg::OrderKey()
 		else
 		{
 			//超时，提示并退出
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1274,7 +1289,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 	if ((i==RETRY_TIMES) && !exitSign)
 	{
 			//连接不稳定，退出
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1307,7 +1322,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 					return TRUE;
 				break;
 				case ERASE_NOTOK:
-					ShowErrMessageBox(_T("擦除flash失败"));
+					//ShowErrMessageBox(_T("擦除flash失败"));
+					MessageBox(_T("擦除flash失败"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1324,7 +1340,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1332,8 +1349,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1366,7 +1383,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 					return TRUE;
 				break;
 				case SPERASE_NOTOK:
-					ShowErrMessageBox(_T("擦除flash失败"));
+					//ShowErrMessageBox(_T("擦除flash失败"));
+					MessageBox(_T("擦除flash失败"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1383,7 +1401,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1391,8 +1410,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1482,7 +1501,8 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 				else
 				{
 					//超时，提示并退出			
-					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1491,13 +1511,13 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
-				ShowInfo(_T("多次重试失败，请重新操作"));
+				ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 				return FALSE;
 			}
 			break;
 			case FILE_READ_ERROR:
 				//读取错误
-				ShowInfo(_T("读取错误，停止发送"));
+				ShowInfo(_T("文件读取错误，停止烧写"));
 				return FALSE;
 			break;
 			case FILE_READ_END:
@@ -1587,7 +1607,8 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 				else
 				{
 					//超时，提示并退出			
-					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1596,7 +1617,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
-				ShowInfo(_T("多次重试失败，请重新操作"));
+				ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 				return FALSE;
 			}
 			break;
@@ -1666,7 +1687,8 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1674,8 +1696,8 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1726,7 +1748,8 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1734,8 +1757,8 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1789,7 +1812,8 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1797,8 +1821,8 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
