@@ -468,7 +468,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		/*
 		if (startAddress%8!=0)
 		{
-			MessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//MessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"),_T("警告"),MB_OK|MB_ICONWARNING);
 			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
 			ShowInfo(_T("退出BootLoader"));
 			return;
