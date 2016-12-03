@@ -103,6 +103,12 @@ public:
 	HWND hStatusWindow;
 	CStatusBar m_StatusBar;
 	CProgressCtrl m_ProgressState;
+	
+	UINT CalculateKey(UINT a)
+	{
+		return a*a + a + 1;
+	}
+
 
 public:
 	afx_msg void OnMenuExit();
@@ -117,5 +123,7 @@ public:
 	afx_msg void OnCbnSelchangeComboEncryption();
 	afx_msg void OnBnClickedButtonTest();
 	afx_msg void OnClose();
+	afx_msg void OnBnClickedCheckDefaultpassword();
 };
+
 

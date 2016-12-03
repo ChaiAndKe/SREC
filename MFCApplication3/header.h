@@ -148,8 +148,9 @@ const int CAN_DISCONNECT_NOTOK = 1;
 
 #endif
 
-EXTERN_C UINT CalculateKey(UINT a);
-#pragma comment(lib,"TurnDll.lib")
+
+
+
 
 class BaseType{
 public:

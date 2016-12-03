@@ -1,7 +1,6 @@
 #include "StdAfx.h"
 #include "AnalysisFile.h"
 
-#pragma comment(lib,"TurnDll.lib")
 
 BOOL IsSetArrange = FALSE;
 
