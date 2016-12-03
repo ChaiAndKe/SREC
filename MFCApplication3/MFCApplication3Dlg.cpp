@@ -591,7 +591,8 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 	switch(((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel())
 	{
 	case 0:
-		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
+		if(!((CButton *)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->GetCheck())
+			((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(TRUE);
 		
 		break;
