@@ -5,8 +5,10 @@
 #define _TEST
 #endif
 
+#ifdef _DEBUG
 //#define _MONITOR
-#define _SIMULATOR
+//#define _SIMULATOR
+#endif
 
 #ifdef __cplusplus
 
