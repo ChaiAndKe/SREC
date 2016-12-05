@@ -178,6 +178,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="res\111.png" />
+    <None Include="res\20161205075124507.ico" />
+    <None Include="res\222.png" />
+    <None Include="res\icon1.ico" />
     <None Include="res\MFCApplication3.ico" />
     <None Include="res\MFCApplication3.rc2" />
   </ItemGroup>

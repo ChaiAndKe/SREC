@@ -80,10 +80,6 @@ public:
 	BaseType* receiceData;
 	BaseType* sendData1;
 	BaseType* sendData2;
-
-	//HANDLE receiveEvent;
-	//HANDLE exitEvent1;
-	//HANDLE exitEvent2;
 	
 	volatile BOOL isTransmitOK;
 	DWORD canFrameCount;
@@ -92,10 +88,6 @@ public:
 	int m_startFromMain;//是否从main开始启动
 
 public:
-	//线程
-	//static UINT ReceiveThread(void *param);
-	//static UINT SendThreadErase(void *param);
-	//Sstatic UINT SendThreadProgram(void *param);
 	static UINT SendThread( void *param );
 
 public:
@@ -121,9 +113,9 @@ public:
 	afx_msg void OnBnClickedRadioEraseflash();
 	afx_msg void OnBnClickedRadioEraseandprogram();
 	afx_msg void OnCbnSelchangeComboEncryption();
-	afx_msg void OnBnClickedButtonTest();
 	afx_msg void OnClose();
 	afx_msg void OnBnClickedCheckDefaultpassword();
+	afx_msg void OnAbout();
 };
 
 

@@ -80,9 +80,9 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RADIO_ERASEFLASH, &CMFCApplication3Dlg::OnBnClickedRadioEraseflash)
 	ON_BN_CLICKED(IDC_RADIO_ERASEANDPROGRAM, &CMFCApplication3Dlg::OnBnClickedRadioEraseandprogram)
 	ON_CBN_SELCHANGE(IDC_COMBO_ENCRYPTION, &CMFCApplication3Dlg::OnCbnSelchangeComboEncryption)
-	ON_BN_CLICKED(IDC_BUTTON_TEST, &CMFCApplication3Dlg::OnBnClickedButtonTest)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
+	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
 END_MESSAGE_MAP()
 
 
@@ -121,7 +121,6 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 #ifdef _DEBUG
 	SetWindowText(_T("BootLoader_DEBUG_MODE"));
-	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
 	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 #else
 	SetWindowText(_T("BootLoader"));
@@ -130,11 +129,11 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 
 	//加载菜单栏
-	/*
+	
 	m_Menu.LoadMenuW(IDR_MENU1);
 	SetMenu(&m_Menu);
 	DrawMenuBar();
-	*/
+	
 
 	//设置状态栏
 
@@ -252,20 +251,6 @@ HCURSOR CMFCApplication3Dlg::OnQueryDragIcon()
 }
 
 
-
-void CMFCApplication3Dlg::OnBnClickedButtonTest()
-{
-	// DEBUG模式下有效，否则隐藏
-	OnBnClickedButtonStartbootloader();
-#if 1
-	UCHAR a,b,c;
-	a = 0;
-	b=0;
-	c=a+b;
-	a=0;
-	b=0;
-#endif
-}
 
 void CMFCApplication3Dlg::OnMenuExit()
 {
@@ -2005,3 +1990,11 @@ void CMFCApplication3Dlg::OnClose()
 	CDialogEx::OnClose();
 }
 
+
+
+void CMFCApplication3Dlg::OnAbout()
+{
+	// TODO: 在此添加命令处理程序代码
+	CAboutDlg dlg;
+	dlg.DoModal();
+}

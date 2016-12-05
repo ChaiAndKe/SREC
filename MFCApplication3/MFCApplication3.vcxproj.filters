@@ -22,6 +22,18 @@
     <None Include="res\MFCApplication3.ico">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="res\icon1.ico">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="res\20161205075124507.ico">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="res\111.png">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="res\222.png">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MFCApplication3.h">
