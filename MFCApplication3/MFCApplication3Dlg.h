@@ -103,9 +103,6 @@ public:
 
 
 public:
-	afx_msg void OnMenuExit();
-	afx_msg void OnMenuLoadRbl();
-	afx_msg void OnMenuSaveRbl();
 	afx_msg void OnBnClickedButtonConnectcan();
 	afx_msg void OnBnClickedButtonFilebrowse();
 	afx_msg void OnBnClickedButtonStartbootloader();
