@@ -121,7 +121,7 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 #ifdef _DEBUG
 	SetWindowText(_T("BootLoader_DEBUG_MODE"));
-	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
+	((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
 	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 #else
 	SetWindowText(_T("BootLoader"));
@@ -385,10 +385,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
-	
-	if (!CStringToUINT(str,passWord,_T("密码")))
+
+	if (((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0)
 	{
-		return;
+		if (!CStringToUINT(str,passWord,_T("密码")))
+		{
+			return;
+		}
 	}
 	//密码已经产生，在passWord
 
@@ -518,7 +521,7 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
-	for (int i=2;i<strLength;i++)
+	for (int i=0;i<strLength;i++)
 	{
 		addr[i] = (UCHAR)str.GetAt(i);
 
@@ -541,7 +544,7 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 
 	for (int i=0;i<4;i++)
 	{
-		addr[i]= addr[2+2*i]<<4|addr[3+2*i];
+		addr[i]= addr[2*i]<<4|addr[1+2*i];
 	}
 
 	d=addr[0]<<24|addr[1]<<16|addr[2]<<8|addr[3];
