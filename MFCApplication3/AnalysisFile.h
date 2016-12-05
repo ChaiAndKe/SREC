@@ -72,6 +72,21 @@ private:
 	int IsDataInside();//数据是否在范围内
 	void GenerateSendData();//生成要发送的数据
 
+	char strTobin( char a )
+	{
+		if (a>='0' && a<='9')
+		{
+			a -= 0x30;
+		}
+		else if (a>='A' && a<='F')
+		{
+			a -= 0x37;
+		}else if (a>='a' && a<='f')
+		{
+			a -= 0x57;
+		}
+		return a;
+	}
 
 public:
 	//外部接口
@@ -88,6 +103,5 @@ public:
 	UCHAR GetSendedPercent();
 };
 
-EXTERN_C char strTobin(char a);
 
 #endif
