@@ -103,9 +103,6 @@ public:
 
 
 public:
-	afx_msg void OnMenuExit();
-	afx_msg void OnMenuLoadRbl();
-	afx_msg void OnMenuSaveRbl();
 	afx_msg void OnBnClickedButtonConnectcan();
 	afx_msg void OnBnClickedButtonFilebrowse();
 	afx_msg void OnBnClickedButtonStartbootloader();
@@ -116,6 +113,7 @@ public:
 	afx_msg void OnClose();
 	afx_msg void OnBnClickedCheckDefaultpassword();
 	afx_msg void OnAbout();
+	afx_msg void OnMenuExit();
 };
 
 

@@ -70,9 +70,6 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
-	ON_COMMAND(ID_Menu_Load_RBL, &CMFCApplication3Dlg::OnMenuLoadRbl)
-	ON_COMMAND(ID_Menu_Save_RBL, &CMFCApplication3Dlg::OnMenuSaveRbl)
 	ON_BN_CLICKED(IDC_BUTTON_CONNECTCAN, &CMFCApplication3Dlg::OnBnClickedButtonConnectcan)
 	ON_BN_CLICKED(IDC_BUTTON_FILEBROWSE, &CMFCApplication3Dlg::OnBnClickedButtonFilebrowse)
 	ON_BN_CLICKED(IDC_BUTTON_STARTBOOTLOADER, &CMFCApplication3Dlg::OnBnClickedButtonStartbootloader)
@@ -83,6 +80,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
 	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
+	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
 END_MESSAGE_MAP()
 
 
@@ -119,14 +117,8 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-#ifdef _DEBUG
-	SetWindowText(_T("BootLoader_DEBUG_MODE"));
-	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
-#else
+
 	SetWindowText(_T("BootLoader"));
-	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T(""));
-#endif
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 
 	//加载菜单栏
 	
@@ -170,9 +162,9 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CComboBox*)GetDlgItem(IDC_COMBO_MCU))->SetCurSel(0);
 	((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->SetCurSel(0);
 	//0x00FE0000
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->SetWindowTextW(_T("0x00FE0000"));
 	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x00FF0000"));
-//	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 	((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->SetCheck(TRUE);
 	//禁用地址
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->EnableWindow(FALSE);
@@ -185,11 +177,6 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	receiceData = new BaseType(8);
 	sendData1 = new BaseType(8);
 	sendData2 = new BaseType(24);
-
-	//线程事件
-	//receiveEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
-	//exitEvent1 = CreateEvent(NULL,FALSE,FALSE,NULL);
-	//exitEvent2 = CreateEvent(NULL,FALSE,FALSE,NULL);
 
 	filePathName = _T("");
 	fileToWrite = NULL;
@@ -249,27 +236,6 @@ HCURSOR CMFCApplication3Dlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-
-
-
-void CMFCApplication3Dlg::OnMenuExit()
-{
-	TRACE("菜单---退出");
-	exit(-1);
-}
-
-
-void CMFCApplication3Dlg::OnMenuLoadRbl()
-{
-	TRACE("菜单---加载");
-}
-
-
-void CMFCApplication3Dlg::OnMenuSaveRbl()
-{
-	TRACE("菜单---保存");
-}
-
 
 void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 {
@@ -371,7 +337,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
 
-	if (((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0)
+	if (!((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0) 
 	{
 		if (!CStringToUINT(str,passWord,_T("密码")))
 		{
@@ -406,19 +372,8 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 				//ShowInfo(_T("退出BootLoader"));
 				return;
 			}
-			/*
-			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
-			{
-				MessageBox(_T("文件格式错误，请检查！"),_T("警告"),MB_OK|MB_ICONWARNING);
-				ShowInfo(_T("文件格式错误，请检查！"));
-				ShowInfo(_T("退出BootLoader"));
-				fileToWrite->Close();
-				delete fileToWrite;
-				fileToWrite = NULL;
-				return;
-			}*/
+			
 			fileToWrite->SeekToBegin();
-			//ShowInfo(_T("文件打开成功！"));
 		}
 	}
 
@@ -459,14 +414,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 				return;
 			}
 		}
-		/*
-		if (startAddress%8!=0)
-		{
-			//MessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"),_T("警告"),MB_OK|MB_ICONWARNING);
-			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
-			ShowInfo(_T("退出BootLoader"));
-			return;
-		}*/
+		
 		//设置边界
 		try{
 			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
@@ -488,13 +436,6 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//启动线程
 	AfxBeginThread(SendThread,this);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
-	/*
-	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
-	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(FALSE);
-	GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(FALSE);*/
 }
 
 BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
@@ -521,7 +462,6 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 		{
 			addr[i] -= 0x57;
 		}else{
-			//AfxMessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"));
 			MessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
@@ -679,17 +619,6 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		//MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
 		return CAN_STARTDEV_ERROR;
 	}
-	/*
-	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to set the filter
-	{
-		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
-		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
-		{
-			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
-			VCI_CloseDevice(m_devtype,m_devind);
-			return CAN_SETFILTER_ERROR;
-		}
-	}*/
 	
 	return CAN_CONNECT_OK;
 }
@@ -716,11 +645,7 @@ void CMFCApplication3Dlg::ShowProgress(int percent)
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
 {
 	CString strInfo;
-	/*
-	SYSTEMTIME st;
-	GetLocalTime(&st);
-	strInfo.Format(_T("%d-%d-%d %2d:%2d:%2d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
-	strInfo += str;*/
+
 	strInfo = str;
 	if(index == -1)//在m_ListInfo末尾插入
 	{
@@ -2000,4 +1925,11 @@ void CMFCApplication3Dlg::OnAbout()
 	// TODO: 在此添加命令处理程序代码
 	CAboutDlg dlg;
 	dlg.DoModal();
+}
+
+
+void CMFCApplication3Dlg::OnMenuExit()
+{
+	// TODO: 在此添加命令处理程序代码
+	exit(0);
 }
