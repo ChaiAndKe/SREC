@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MFCApplication3", "MFCApplication3\MFCApplication3.vcxproj", "{E301840F-6D1F-414C-AC2F-1EF909CEEBEB}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Bootloader", "Bootloader\Bootloader.vdproj", "{F787AD3A-BC5C-4C39-8A77-1777E0991ADD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +21,10 @@ Global
 		{E301840F-6D1F-414C-AC2F-1EF909CEEBEB}.Release|Win32.Build.0 = Release|Win32
 		{E301840F-6D1F-414C-AC2F-1EF909CEEBEB}.Release|x64.ActiveCfg = Release|x64
 		{E301840F-6D1F-414C-AC2F-1EF909CEEBEB}.Release|x64.Build.0 = Release|x64
+		{F787AD3A-BC5C-4C39-8A77-1777E0991ADD}.Debug|Win32.ActiveCfg = Debug
+		{F787AD3A-BC5C-4C39-8A77-1777E0991ADD}.Debug|x64.ActiveCfg = Debug
+		{F787AD3A-BC5C-4C39-8A77-1777E0991ADD}.Release|Win32.ActiveCfg = Release
+		{F787AD3A-BC5C-4C39-8A77-1777E0991ADD}.Release|x64.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
