@@ -5,8 +5,11 @@
 #define _TEST
 #endif
 
+
+#ifdef _DEBUG 
 //#define _MONITOR
-#define _SIMULATOR
+//#define _SIMULATOR
+#endif
 
 #ifdef __cplusplus
 
@@ -148,8 +151,9 @@ const int CAN_DISCONNECT_NOTOK = 1;
 
 #endif
 
-EXTERN_C UINT CalculateKey(UINT a);
-#pragma comment(lib,"TurnDll.lib")
+
+
+
 
 class BaseType{
 public:

@@ -70,9 +70,6 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
-	ON_COMMAND(ID_Menu_Load_RBL, &CMFCApplication3Dlg::OnMenuLoadRbl)
-	ON_COMMAND(ID_Menu_Save_RBL, &CMFCApplication3Dlg::OnMenuSaveRbl)
 	ON_BN_CLICKED(IDC_BUTTON_CONNECTCAN, &CMFCApplication3Dlg::OnBnClickedButtonConnectcan)
 	ON_BN_CLICKED(IDC_BUTTON_FILEBROWSE, &CMFCApplication3Dlg::OnBnClickedButtonFilebrowse)
 	ON_BN_CLICKED(IDC_BUTTON_STARTBOOTLOADER, &CMFCApplication3Dlg::OnBnClickedButtonStartbootloader)
@@ -80,8 +77,10 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RADIO_ERASEFLASH, &CMFCApplication3Dlg::OnBnClickedRadioEraseflash)
 	ON_BN_CLICKED(IDC_RADIO_ERASEANDPROGRAM, &CMFCApplication3Dlg::OnBnClickedRadioEraseandprogram)
 	ON_CBN_SELCHANGE(IDC_COMBO_ENCRYPTION, &CMFCApplication3Dlg::OnCbnSelchangeComboEncryption)
-	ON_BN_CLICKED(IDC_BUTTON_TEST, &CMFCApplication3Dlg::OnBnClickedButtonTest)
 	ON_WM_CLOSE()
+	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
+	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
+	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
 END_MESSAGE_MAP()
 
 
@@ -118,20 +117,15 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-#ifdef _DEBUG
-	SetWindowText(_T("BootLoader通信_DEBUG_MODE"));
-	//((CButton*)GetDlgItem(IDC_BUTTON_TEST))->ShowWindow(SW_NORMAL);
-	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x00000000"));
-#else
-	SetWindowText(_T("BootLoader通信"));
-	//((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
-#endif
+
+	SetWindowText(_T("BootLoader"));
 
 	//加载菜单栏
+	
 	m_Menu.LoadMenuW(IDR_MENU1);
 	SetMenu(&m_Menu);
 	DrawMenuBar();
-
+	
 
 	//设置状态栏
 
@@ -168,9 +162,9 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	((CComboBox*)GetDlgItem(IDC_COMBO_MCU))->SetCurSel(0);
 	((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->SetCurSel(0);
 	//0x00FE0000
+	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->SetWindowTextW(_T("0x00FE0000"));
 	((CEdit*)GetDlgItem(IDC_EDIT_ENDADDRESS))->SetWindowTextW(_T("0x00FF0000"));
-//	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("0x"));
 	((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->SetCheck(TRUE);
 	//禁用地址
 	((CEdit*)GetDlgItem(IDC_EDIT_STARTADDRESS))->EnableWindow(FALSE);
@@ -183,11 +177,6 @@ BOOL CMFCApplication3Dlg::OnInitDialog()
 	receiceData = new BaseType(8);
 	sendData1 = new BaseType(8);
 	sendData2 = new BaseType(24);
-
-	//线程事件
-	//receiveEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
-	//exitEvent1 = CreateEvent(NULL,FALSE,FALSE,NULL);
-	//exitEvent2 = CreateEvent(NULL,FALSE,FALSE,NULL);
 
 	filePathName = _T("");
 	fileToWrite = NULL;
@@ -248,41 +237,6 @@ HCURSOR CMFCApplication3Dlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
-
-void CMFCApplication3Dlg::OnBnClickedButtonTest()
-{
-	// DEBUG模式下有效，否则隐藏
-	OnBnClickedButtonStartbootloader();
-#if 1
-	UCHAR a,b,c;
-	a = 0;
-	b=0;
-	c=a+b;
-	a=0;
-	b=0;
-#endif
-}
-
-void CMFCApplication3Dlg::OnMenuExit()
-{
-	TRACE("菜单---退出");
-	exit(-1);
-}
-
-
-void CMFCApplication3Dlg::OnMenuLoadRbl()
-{
-	TRACE("菜单---加载");
-}
-
-
-void CMFCApplication3Dlg::OnMenuSaveRbl()
-{
-	TRACE("菜单---保存");
-}
-
-
 void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 {
 	TRACE("连接CAN");
@@ -316,6 +270,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonConnectcan()
 			((CButton*)GetDlgItem(IDC_BUTTON_CONNECTCAN))->SetWindowTextW(_T("断开CAN"));
 			//set the status bar
 			m_StatusBar.SetPaneText(0,_T("CAN已连接"));
+			break;
+		case CAN_OPENDEV_ERROR:
+		case CAN_INITDEV_ERROR:
+		case CAN_STARTDEV_ERROR:
+		case CAN_SETFILTER_ERROR:
+			//MessageBox(_T("CAN连接失败"), _T("警告"), MB_OK);
+			MessageBox(_T("CAN连接失败!"), _T("警告"), MB_OK|MB_ICONWARNING);
 			break;
 
 		default:
@@ -368,14 +329,20 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//擦除			boot,key,erase,boot_end,get_version
 	//只写数据		boot,key,program,boot_end,get_version
 	//擦除并编程  boot,key,program,boot_end,get_version
-
+	
+	//清空ListInfo和进度条
+	ShowProgress(0);
+	m_ListInfo.ResetContent();
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
-	
-	if (!CStringToUINT(str,passWord,_T("密码")))
+
+	if (((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0) 
 	{
-		return;
+		if (!CStringToUINT(str,passWord,_T("密码")))
+		{
+			return;
+		}
 	}
 	//密码已经产生，在passWord
 
@@ -384,7 +351,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	{
 		if (filePathName.IsEmpty())
 		{
-			AfxMessageBox(_T("请选择SREC文件"));
+			MessageBox(_T("请选择SREC文件"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return;
 		}else
 		{
@@ -400,24 +367,13 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			}
 			if (NULL==fileToWrite)
 			{
-				AfxMessageBox(_T("文件打开失败，请重试！"));
-				//ShowInfo(_T("文件打开失败，请重试！"));
+				//AfxMessageBox(_T("文件打开失败，请重试！"));
+				ShowInfo(_T("文件打开失败，请重试！"));
 				//ShowInfo(_T("退出BootLoader"));
 				return;
 			}
-			/*
-			else if (fileToWrite->CheckSrecFile()==FILE_ADDRESS_ERROR)
-			{
-				AfxMessageBox(_T("文件格式错误，请检查！"));
-				ShowInfo(_T("文件格式错误，请检查！"));
-				ShowInfo(_T("退出BootLoader"));
-				fileToWrite->Close();
-				delete fileToWrite;
-				fileToWrite = NULL;
-				return;
-			}*/
+			
 			fileToWrite->SeekToBegin();
-			//ShowInfo(_T("文件打开成功！"));
 		}
 	}
 
@@ -436,7 +392,8 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		CString str;
 		if (!finder.FindFile(path))
 		{
-			AfxMessageBox(_T("未找到配置文件"));
+			//MessageBox(_T("未找到配置文件"),_T("警告"),MB_OK|MB_ICONWARNING);
+			ShowInfo(_T("未找到配置文件！"));
 			return;
 		}
 		else
@@ -452,58 +409,45 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 			stopAddress = ::GetPrivateProfileIntW(AppName,endAddr,1,path);
 			if (stopAddress==1||startAddress==1)
 			{
-				AfxMessageBox(_T("地址读取错误，请检查"));
+				//MessageBox(_T("地址读取错误，请检查"),_T("警告"),MB_OK|MB_ICONWARNING);
+				ShowInfo(_T("地址读取错误，请检查！"));
 				return;
 			}
 		}
-		/*
-		if (startAddress%8!=0)
-		{
-			AfxMessageBox(_T("起始地址设置错误，地址必须为8的整数倍！"));
-			ShowInfo(_T("起始地址设置错误，地址必须为8的整数倍！"));
-			ShowInfo(_T("退出BootLoader"));
-			return;
-		}*/
+		
 		//设置边界
 		try{
 			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
 			{
-				AfxMessageBox(_T("地址设置错误，请重试！"));
+				//MessageBox(_T("地址设置错误，请重试！"),_T("警告"),MB_OK|MB_ICONWARNING);
+				ShowInfo(_T("文件地址设置错误，请重新配置！"));
 				return;
 			}
 		}catch(char *s)
 		{
 			CString tmp(s);
-			AfxMessageBox(tmp);
+			//MessageBox(tmp,_T("警告"),MB_OK|MB_ICONWARNING);
+			ShowInfo(tmp);
 			return;
 		}
 
 
 	}
 	//启动线程
-	ShowProgress(0);
-	m_ListInfo.ResetContent();
 	AfxBeginThread(SendThread,this);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
-	/*
-	GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(FALSE);
-	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(FALSE);
-	GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(FALSE);
-	GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(FALSE);*/
 }
 
 BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 {
 	int strLength = str.GetLength();
-	if (strLength!=10)
+	if (strLength!=8)
 	{
-		AfxMessageBox(mess+_T("长度错误，请输入4字节地址，共计8位，以0x开头"));
+		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位"),_T("警告"),MB_OK|MB_ICONWARNING);
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
-	for (int i=2;i<strLength;i++)
+	for (int i=0;i<strLength;i++)
 	{
 		addr[i] = (UCHAR)str.GetAt(i);
 
@@ -518,19 +462,34 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 		{
 			addr[i] -= 0x57;
 		}else{
-			AfxMessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"));
+			MessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 	}	
 
 	for (int i=0;i<4;i++)
 	{
-		addr[i]= addr[2+2*i]<<4|addr[3+2*i];
+		addr[i]= addr[2*i]<<4|addr[1+2*i];
 	}
 
 	d=addr[0]<<24|addr[1]<<16|addr[2]<<8|addr[3];
 
 	return TRUE;
+}
+
+void CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (((CButton *)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->GetCheck())
+	{
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T("00000000"));
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(FALSE);
+	}
+	else
+	{
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->SetWindowTextW(_T(""));
+		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
+	}
 }
 
 void CMFCApplication3Dlg::OnBnClickedRadioWritedata()
@@ -563,7 +522,8 @@ void CMFCApplication3Dlg::OnCbnSelchangeComboEncryption()
 	switch(((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel())
 	{
 	case 0:
-		((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
+		if(!((CButton *)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->GetCheck())
+			((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->EnableWindow(TRUE);
 		((CCheckListBox*)GetDlgItem(IDC_CHECK_DEFAULTPASSWORD))->EnableWindow(TRUE);
 		
 		break;
@@ -628,14 +588,14 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 
 	if(VCI_OpenDevice(m_devtype, m_devind, 0) != STATUS_OK)
 	{
-		MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("打开设备失败!"),_T("警告"), MB_OK);
 		return CAN_OPENDEV_ERROR;
 	}
 	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to init the baud 
 	{
 		if (VCI_SetReference(m_devtype,m_devind, m_cannum, 0, &baud_E) != STATUS_OK)
 		{
-			MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK);
+			//MessageBox(_T("设置波特率错误!"), _T("警告"), MB_OK);
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_OPENDEV_ERROR;
 		}
@@ -643,33 +603,22 @@ int CMFCApplication3Dlg::ConnectCan(int typeIndex,int channel,int baudRateIndex)
 		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
 		{
 			//MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
-			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK);
+			//MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK);
 			VCI_CloseDevice(m_devtype,m_devind);
 			return CAN_SETFILTER_ERROR;
 		}
 	}
 	if(VCI_InitCAN(m_devtype, m_devind, m_cannum, &init_config) !=STATUS_OK)
 	{
-		MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("初始化CAN失败!"),_T("警告"), MB_OK);
 		VCI_CloseDevice(m_devtype, m_devind);
 		return CAN_INITDEV_ERROR;
 	}
 	if(VCI_StartCAN(m_devtype,m_devind,m_cannum) != 1)
 	{
-		MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
+		//MessageBox(_T("启动CAN失败!"),_T("警告"), MB_OK);
 		return CAN_STARTDEV_ERROR;
 	}
-	/*
-	if(1 == typeIndex)//for USBCAN-2E-U, VCI_SetReference should be called to set the filter
-	{
-		VCI_SetReference(m_devtype, m_devind, m_cannum, 1, &filterRecord);//填充滤波表格
-		if (VCI_SetReference(m_devtype, m_devind, m_cannum, 2, NULL) != STATUS_OK)//使滤波表格生效
-		{
-			MessageBox(_T("设置滤波失败!"), _T("警告"), MB_OK | MB_ICONQUESTION);
-			VCI_CloseDevice(m_devtype,m_devind);
-			return CAN_SETFILTER_ERROR;
-		}
-	}*/
 	
 	return CAN_CONNECT_OK;
 }
@@ -696,10 +645,7 @@ void CMFCApplication3Dlg::ShowProgress(int percent)
 void CMFCApplication3Dlg::ShowInfo(CString str, int index/*=-1*/)
 {
 	CString strInfo;
-	SYSTEMTIME st;
-	GetLocalTime(&st);
-	strInfo.Format(_T("%d-%d-%d %d:%d:%d "),st.wYear,st.wMonth,st.wDay,st.wHour,st.wMinute,st.wSecond);
-	//strInfo = strTime + str;
+
 	strInfo = str;
 	if(index == -1)//在m_ListInfo末尾插入
 	{
@@ -1174,7 +1120,8 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 					return TRUE;
 				break;
 				case PASSWORD_NOTOK:
-					ShowErrMessageBox(_T("密码错误,请重新输入密码"));
+					//ShowErrMessageBox(_T("密码错误,请重新输入密码"));
+					MessageBox(_T("密码错误,请重新输入密码"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1191,7 +1138,8 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1199,8 +1147,7 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1235,7 +1182,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 					if (l_key != receiceData->returnData)
 					{
 						//KEY校验未通过，退出
-						//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+						//ShowErrMessageBox(_T("KEY校验错误"));
 						ShowInfo(_T("KEY校验错误"));
 						return  FALSE;
 					}
@@ -1247,7 +1194,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 					}
 				break;
 				case KEY_NOTOK:
-					//dlg->ShowErrMessageBox(_T("KEY校验错误"));
+					//ShowErrMessageBox(_T("KEY校验错误"));
 					ShowInfo(_T("KEY校验错误"));
 					return FALSE;
 				break;
@@ -1265,7 +1212,8 @@ BOOL CMFCApplication3Dlg::OrderKey()
 		else
 		{
 			//超时，提示并退出
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1274,7 +1222,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 	if ((i==RETRY_TIMES) && !exitSign)
 	{
 			//连接不稳定，退出
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1307,7 +1255,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 					return TRUE;
 				break;
 				case ERASE_NOTOK:
-					ShowErrMessageBox(_T("擦除flash失败"));
+					//ShowErrMessageBox(_T("擦除flash失败"));
+					MessageBox(_T("擦除flash失败"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1324,7 +1273,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1332,8 +1282,8 @@ BOOL CMFCApplication3Dlg::OrderErase()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1366,7 +1316,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 					return TRUE;
 				break;
 				case SPERASE_NOTOK:
-					ShowErrMessageBox(_T("擦除flash失败"));
+					//ShowErrMessageBox(_T("擦除flash失败"));
+					MessageBox(_T("擦除flash失败"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1383,7 +1334,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1391,8 +1343,8 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1475,13 +1427,15 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 						break;
 						case ADDRALIGN_ERR:
 							ShowInfo(_T("文件地址对齐错误，无法写入"));
+							return FALSE;
 						break;
 					}
 				}
 				else
 				{
 					//超时，提示并退出			
-					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1490,13 +1444,13 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
-				ShowInfo(_T("多次重试失败，请重新操作"));
+				ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 				return FALSE;
 			}
 			break;
 			case FILE_READ_ERROR:
 				//读取错误
-				ShowInfo(_T("读取错误，停止发送"));
+				ShowInfo(_T("文件读取错误，停止烧写"));
 				return FALSE;
 			break;
 			case FILE_READ_END:
@@ -1579,13 +1533,15 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 						break;
 						case ADDRALIGN_ERR:
 							ShowInfo(_T("文件地址对齐错误，无法写入"));
+							return FALSE;
 						break;
 					}
 				}
 				else
 				{
 					//超时，提示并退出			
-					ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1594,7 +1550,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 			if (i==RETRY_TIMES&&exitSign==FALSE)
 			{
 				//连接不稳定，退出
-				ShowInfo(_T("多次重试失败，请重新操作"));
+				ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 				return FALSE;
 			}
 			break;
@@ -1664,7 +1620,8 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1672,8 +1629,8 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1724,7 +1681,8 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1732,8 +1690,8 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1787,7 +1745,8 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 		else
 		{
 			//超时，提示并退出			
-			ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
+			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1795,8 +1754,8 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 
 	if ((i == RETRY_TIMES) && !exitSign)
 	{
-		//dlg->ShowErrMessageBox(_T("连接不稳定"));
-		ShowInfo(_T("多次重试失败，请重新操作"));
+		//ShowErrMessageBox(_T("连接不稳定"));
+		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
 }
@@ -1957,4 +1916,21 @@ void CMFCApplication3Dlg::OnClose()
 	//MessageBox(_T("就要关闭我了，好怕怕"),MB_OK);
 	DisConnectCan();
 	CDialogEx::OnClose();
+}
+
+
+
+void CMFCApplication3Dlg::OnAbout()
+{
+	// TODO: 在此添加命令处理程序代码
+	CAboutDlg dlg;
+	dlg.DoModal();
+}
+
+
+void CMFCApplication3Dlg::OnMenuExit()
+{
+	// TODO: 在此添加命令处理程序代码
+	DisConnectCan();
+	exit(0);
 }
