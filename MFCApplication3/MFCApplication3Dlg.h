@@ -7,6 +7,7 @@
 #include "testlistbox.h"
 #include "AnalysisFile.h"
 #include "afxcmn.h"
+#include "SettingDialog.h"
 
 // CMFCApplication3Dlg ¶Ô»°¿ò
 class CMFCApplication3Dlg : public CDialogEx
@@ -114,6 +115,7 @@ public:
 	afx_msg void OnBnClickedCheckDefaultpassword();
 	afx_msg void OnAbout();
 	afx_msg void OnMenuExit();
+	afx_msg void OnMenuSetting();
 };
 
 

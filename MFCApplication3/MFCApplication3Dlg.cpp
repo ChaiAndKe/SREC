@@ -81,6 +81,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
 	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
 	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
+	ON_COMMAND(ID_Menu_SETTING, &CMFCApplication3Dlg::OnMenuSetting)
 END_MESSAGE_MAP()
 
 
@@ -1933,4 +1934,10 @@ void CMFCApplication3Dlg::OnMenuExit()
 	// TODO: 在此添加命令处理程序代码
 	DisConnectCan();
 	exit(0);
+}
+
+void CMFCApplication3Dlg::OnMenuSetting()
+{
+	CSettingDialog dlg;
+	dlg.DoModal();
 }
