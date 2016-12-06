@@ -99,11 +99,37 @@ void CSettingDialog::OnBnClickedOk()
 	AppName = _T("DataSegment");
 	startAddr = _T("startAddr");
 	endAddr = _T("endAddr");
-	::WritePrivateProfileString(AppName,startAddr,m_Data_StartAddr,path);
-	::WritePrivateProfileString(AppName,endAddr,m_Data_EndAddr,path);
+	DWORD l_errorD;
+	CString l_errorStr;
+	if(::WritePrivateProfileString(AppName,startAddr,m_Data_StartAddr,path) == 0)
+	{
+		l_errorD = GetLastError();
+		l_errorStr.Format(_T("–¥»Î ß∞‹,¥ÌŒÛ¥˙¬Î%ld"),l_errorD);
+		AfxMessageBox(l_errorStr);
+		return;
+	}
+	if(::WritePrivateProfileString(AppName,endAddr,m_Data_EndAddr,path)==0)
+	{
+		l_errorD = GetLastError();
+		l_errorStr.Format(_T("–¥»Î ß∞‹,¥ÌŒÛ¥˙¬Î%ld"),l_errorD);
+		AfxMessageBox(l_errorStr);
+		return;
+	}
 	AppName = _T("CodeSegment");
-	::WritePrivateProfileString(AppName,startAddr,m_Code_StartAddr,path);
-	::WritePrivateProfileString(AppName,endAddr,m_Code_EndAddr,path);
+	if(::WritePrivateProfileString(AppName,startAddr,m_Code_StartAddr,path)==0)
+	{
+		l_errorD = GetLastError();
+		l_errorStr.Format(_T("–¥»Î ß∞‹,¥ÌŒÛ¥˙¬Î%ld"),l_errorD);
+		AfxMessageBox(l_errorStr);
+		return;
+	}
+	if(::WritePrivateProfileString(AppName,endAddr,m_Code_EndAddr,path)==0)
+	{
+		l_errorD = GetLastError();
+		l_errorStr.Format(_T("–¥»Î ß∞‹,¥ÌŒÛ¥˙¬Î%ld"),l_errorD);
+		AfxMessageBox(l_errorStr);
+		return;
+	}
 	AfxMessageBox(_T("–¥»Î≥…π¶"));
 
 	OnBnClickedCancel();
