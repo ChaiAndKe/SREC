@@ -337,7 +337,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
 
-	if (!((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0) 
+	if (((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0) 
 	{
 		if (!CStringToUINT(str,passWord,_T("密码")))
 		{
@@ -1931,5 +1931,6 @@ void CMFCApplication3Dlg::OnAbout()
 void CMFCApplication3Dlg::OnMenuExit()
 {
 	// TODO: 在此添加命令处理程序代码
+	DisConnectCan();
 	exit(0);
 }
