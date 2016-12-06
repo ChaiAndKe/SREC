@@ -178,6 +178,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="res\lucency.ico" />
     <None Include="res\MFCApplication3.ico" />
     <None Include="res\MFCApplication3.rc2" />
   </ItemGroup>
