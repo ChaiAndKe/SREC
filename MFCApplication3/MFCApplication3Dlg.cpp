@@ -301,13 +301,47 @@ void CMFCApplication3Dlg::OnBnClickedButtonFilebrowse()
 			 //"SREC Files (*.srec)|*.srec|All Files (*.*)|*.*||"
 			 NULL);
 
+	CString AppName=_T("SrecFIlePath"),lastFilePath=_T(""),key_SrecPath=_T("lastFilePath");
+	CString path = _T(".//bootcfg.ini");
+	CFileFind finder;
+	if (!finder.FindFile(path))
+	{
+		::WritePrivateProfileString(AppName,key_SrecPath,_T(""),path);
+	}
+
+	::GetPrivateProfileString(
+		AppName,
+		key_SrecPath,
+		_T(""),
+		lastFilePath.GetBuffer(MAX_PATH),
+		MAX_PATH,
+		path);
+
+	lastFilePath.ReleaseBuffer();//must be called after GetBuffer
+
 	TCHAR buffer[256];
-	GetCurrentDirectory(256,buffer);
-	dlg.m_ofn.lpstrInitialDir = buffer;
+
+	if (lastFilePath.IsEmpty()){
+		GetCurrentDirectory(256,buffer);
+		dlg.m_ofn.lpstrInitialDir = buffer;
+	}
+	else{
+		dlg.m_ofn.lpstrInitialDir = lastFilePath;
+	}
+
 
 	if(dlg.DoModal()==IDOK)
 	{
 		filePathName=dlg.GetPathName(); //文件名保存在了FilePathName里
+		int l_last = filePathName.ReverseFind('\\');
+		CString l_fileNewFolder = filePathName.Mid(0,l_last);
+		if (lastFilePath!=l_fileNewFolder)
+		{
+			lastFilePath = l_fileNewFolder;
+			if(::WritePrivateProfileString(AppName,key_SrecPath,lastFilePath,path)==0){
+				AfxMessageBox(_T("写入失败"));
+			}
+		}
 		((CEdit*)GetDlgItem(IDC_EDIT_FILEPASS))->SetWindowTextW(filePathName);
 	}
 	else
