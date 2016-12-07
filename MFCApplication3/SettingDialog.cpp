@@ -140,7 +140,7 @@ BOOL CSettingDialog::CStringToUINT(const CString &str,UINT &d,CString mess)
 	int strLength = str.GetLength();
 	if (strLength!=10)
 	{
-		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位"),_T("警告"),MB_OK|MB_ICONWARNING);
+		MessageBox(mess+_T("长度错误，请输入4字节地址，以0x开始，共计10位"),_T("警告"),MB_OK|MB_ICONWARNING);
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
