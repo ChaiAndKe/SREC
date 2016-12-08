@@ -7,6 +7,7 @@
 #include "testlistbox.h"
 #include "AnalysisFile.h"
 #include "afxcmn.h"
+#include <unordered_map>
 
 // CMFCApplication3Dlg 对话框
 class CMFCApplication3Dlg : public CDialogEx
@@ -85,10 +86,16 @@ public:
 	DWORD canFrameCount;
 	UCHAR sendThreadState;
 
+	int m_password;//是否启用密码
+	int m_writeData;//只写数据
+	int m_erase;//擦除
+	int m_program;//擦出并编程
 	int m_startFromMain;//是否从main开始启动
 
 public:
 	static UINT SendThread( void *param );
+	static UINT SendThreadPFunction( void *param );
+	BOOL (CMFCApplication3Dlg::*ptrFunc[4])();
 
 public:
 	//status bar

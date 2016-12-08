@@ -333,11 +333,18 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//清空ListInfo和进度条
 	ShowProgress(0);
 	m_ListInfo.ResetContent();
+
+	m_password = ((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel();
+	m_writeData = ((CButton *)GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck();
+	m_erase = ((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck();
+	m_program = ((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck();
+	m_startFromMain = ((CButton *)GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck();
+
 	//step1.获取密码
 	CString str;
 	((CEdit*)GetDlgItem(IDC_EDIT_PASSWROD))->GetWindowText(str);
 
-	if (((CComboBox*)GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel()==0) 
+	if (m_password==0)
 	{
 		if (!CStringToUINT(str,passWord,_T("密码")))
 		{
@@ -347,7 +354,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	//密码已经产生，在passWord
 
 	//step2.判断是否选择了文件
-	if(!((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())
+	if(!m_erase)
 	{
 		if (filePathName.IsEmpty())
 		{
@@ -383,11 +390,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 	CString path = _T(".//bootcfg.ini");
 	CFileFind finder;
 
-	int l_writeData = ((CButton *)GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck();
-	int l_erase = ((CButton *)GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck();
-	int l_program = ((CButton *)GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck();
-	m_startFromMain = ((CButton *)GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck();
-	if (1==l_writeData || 1==l_program)
+	if (1==m_writeData || 1==m_program)
 	{
 		CString str;
 		if (!finder.FindFile(path))
@@ -398,9 +401,9 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		}
 		else
 		{
-			if(1==l_writeData)
+			if(1==m_writeData)
 				AppName = _T("DataSegment");
-			else if(1==l_program)
+			else if(1==m_program)
 				AppName = _T("CodeSegment");
 
 			startAddr = _T("startAddr");
@@ -434,7 +437,8 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 
 	}
 	//启动线程
-	AfxBeginThread(SendThread,this);
+//	AfxBeginThread(SendThread,this);
+	AfxBeginThread(SendThreadPFunction,this);
 	GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(FALSE);
 }
 
@@ -1761,6 +1765,125 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 }
 
 
+UINT CMFCApplication3Dlg::SendThreadPFunction( void *param )
+{
+	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
+
+	std::unordered_map<char,BOOL(CMFCApplication3Dlg::*)()> v;
+	v[ORDER_BOOT] = &CMFCApplication3Dlg::OrderBoot;
+	v[ORDER_KEY] = &CMFCApplication3Dlg::OrderKey;
+	v[ORDER_ERASE] = &CMFCApplication3Dlg::OrderErase;
+	v[ORDER_SPERASE] = &CMFCApplication3Dlg::OrderSPErase;
+	v[ORDER_PROGDATA] = &CMFCApplication3Dlg::OrderProgData;
+	v[ORDER_PROGRAM] = &CMFCApplication3Dlg::OrderProgram;
+	v[ORDER_BOOTEND] = &CMFCApplication3Dlg::OrderBootEnd;
+	v[ORDER_GETVERSION] = &CMFCApplication3Dlg::OrderGetVersion;
+	v[ORDER_MAINSTART] = &CMFCApplication3Dlg::OrderMainStart;
+
+
+	int j;
+	UCHAR state = 0;//记录当前thread运行的state
+	UCHAR orderList[10];//
+	//记录烧写时间
+	CString str;
+	long tickStart=0;
+	long tickEnd=0;
+
+	tickStart = GetTickCount();
+
+	memset(orderList, 0, sizeof(orderList)*sizeof(UCHAR));
+
+	if(dlg->m_program)//擦除并编程
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_ERASE;
+		orderList[3] = ORDER_PROGRAM;
+		orderList[4] = ORDER_BOOTEND;
+		orderList[5] = ORDER_GETVERSION;
+		if(dlg->m_startFromMain)//从main开始执行
+		{
+			orderList[6] = ORDER_MAINSTART;
+		}
+	}
+	else if(dlg->m_writeData)//只写数据
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_SPERASE;
+		orderList[3] = ORDER_PROGDATA;
+		orderList[4] = ORDER_BOOTEND;
+		orderList[5] = ORDER_GETVERSION;
+		if(dlg->m_startFromMain)//从main开始执行
+		{
+			orderList[6] = ORDER_MAINSTART;
+		}
+	}
+	else if(dlg->m_erase)//擦除FLASH
+	{
+		orderList[0] = ORDER_BOOT;
+		orderList[1] = ORDER_KEY;
+		orderList[2] = ORDER_ERASE;
+		orderList[3] = ORDER_BOOTEND;
+		orderList[4] = ORDER_GETVERSION;
+	}
+	//启用密码从BOOT命令开始
+	if(dlg->m_password == 0)
+		j = 0;
+	else //禁用密码从KEY命令开始
+		j = 1;
+	state = orderList[j];
+
+
+	while(state != 0)
+	{
+		dlg->sendThreadState = state;
+		state = ((dlg->*v[orderList[j]])())? orderList[++j]:orderList[++j];
+	}
+
+	dlg->GetDlgItem(IDC_BUTTON_CONNECTCAN)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_WRITEDATA)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_ERASEFLASH)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM)->EnableWindow(TRUE);
+	dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN)->EnableWindow(TRUE);
+
+	state = orderList[j-1];
+	if(ORDER_GETVERSION == state || ORDER_MAINSTART == state)
+	{
+		//记录烧写时间
+		float timeUsed = 0;
+		tickEnd = GetTickCount();
+		if(tickEnd < tickStart)
+		{
+			timeUsed = (0xFFFFFFFF + tickEnd-tickStart)/1000.0;
+		}
+		else
+		{
+			timeUsed = (tickEnd-tickStart)/1000.0;
+		}
+
+		if(ORDER_ERASE == orderList[j-4])
+		{
+			str.Format(_T("擦除共用时间: %.3fs"),(tickEnd-tickStart)/1000.0);
+		}
+		else
+		{
+			str.Format(_T("烧写共用时间: %.3fs 数据传输速度: %dKbps"),timeUsed, (DWORD)((dlg->canFrameCount * 64.0)/timeUsed/1000.0));
+		}
+		dlg->ShowInfo(str);
+	}
+	//关闭打开的文件
+	if (NULL!=dlg->fileToWrite)
+	{
+		dlg->fileToWrite->Close();
+		delete dlg->fileToWrite;
+		dlg->fileToWrite=NULL;
+	}
+	dlg->canFrameCount = 0;
+	dlg->GetDlgItem(IDC_BUTTON_STARTBOOTLOADER)->EnableWindow(TRUE);
+	return 0;
+}
 UINT CMFCApplication3Dlg::SendThread( void *param )
 {
 	CMFCApplication3Dlg* dlg = (CMFCApplication3Dlg*)param;
@@ -1777,7 +1900,7 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 
 	memset(orderList, 0, sizeof(orderList)*sizeof(UCHAR));
 
-	if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEANDPROGRAM))->GetCheck())//擦除并编程
+	if(dlg->m_program)//擦除并编程
 	{
 		orderList[0] = ORDER_BOOT;
 		orderList[1] = ORDER_KEY;
@@ -1785,12 +1908,12 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		orderList[3] = ORDER_PROGRAM;
 		orderList[4] = ORDER_BOOTEND;
 		orderList[5] = ORDER_GETVERSION;
-		if(((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())//从main开始执行
+		if(dlg->m_startFromMain)//从main开始执行
 		{
 			orderList[6] = ORDER_MAINSTART;
 		}
 	}
-	else if(((CButton *)dlg->GetDlgItem(IDC_RADIO_WRITEDATA))->GetCheck())//只写数据
+	else if(dlg->m_writeData)//只写数据
 	{
 		orderList[0] = ORDER_BOOT;
 		orderList[1] = ORDER_KEY;
@@ -1798,12 +1921,12 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		orderList[3] = ORDER_PROGDATA;
 		orderList[4] = ORDER_BOOTEND;
 		orderList[5] = ORDER_GETVERSION;
-		if(((CButton *)dlg->GetDlgItem(IDC_CHECK_STARTFROMMAIN))->GetCheck())//从main开始执行
+		if(dlg->m_startFromMain)//从main开始执行
 		{
 			orderList[6] = ORDER_MAINSTART;
 		}
 	}
-	else if(((CButton *)dlg->GetDlgItem(IDC_RADIO_ERASEFLASH))->GetCheck())//擦除FLASH
+	else if(dlg->m_erase)//擦除FLASH
 	{
 		orderList[0] = ORDER_BOOT;
 		orderList[1] = ORDER_KEY;
@@ -1812,7 +1935,7 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		orderList[4] = ORDER_GETVERSION;
 	}
 	//启用密码从BOOT命令开始
-	if( ((CComboBox*)dlg->GetDlgItem(IDC_COMBO_ENCRYPTION))->GetCurSel() == 0)
+	if(dlg->m_password == 0)
 	{
 		j = 0;
 		state = orderList[j++];
@@ -1934,3 +2057,5 @@ void CMFCApplication3Dlg::OnMenuExit()
 	DisConnectCan();
 	exit(0);
 }
+
+
