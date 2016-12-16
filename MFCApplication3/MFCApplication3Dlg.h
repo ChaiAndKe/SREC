@@ -116,6 +116,8 @@ public:
 	afx_msg void OnAbout();
 	afx_msg void OnMenuExit();
 	afx_msg void OnMenuSetting();
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnDestroy();
 };
 
 

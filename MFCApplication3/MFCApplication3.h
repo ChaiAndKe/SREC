@@ -23,10 +23,11 @@ public:
 // ÷ÿ–¥
 public:
 	virtual BOOL InitInstance();
-
+	HANDLE hMutex;
 //  µœ÷
 
 	DECLARE_MESSAGE_MAP()
+	virtual int ExitInstance();
 };
 
 extern CMFCApplication3App theApp;

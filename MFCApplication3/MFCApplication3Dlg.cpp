@@ -82,6 +82,8 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
 	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
 	ON_COMMAND(ID_Menu_SETTING, &CMFCApplication3Dlg::OnMenuSetting)
+	ON_WM_CREATE()
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -1185,6 +1187,7 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderKey()
@@ -1260,6 +1263,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderErase()
@@ -1321,6 +1325,7 @@ BOOL CMFCApplication3Dlg::OrderErase()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderSPErase()
@@ -1382,6 +1387,7 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderProgram()
@@ -1496,6 +1502,7 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 			break;
 		}//for switch(a)
 	}//for while
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderProgData()
@@ -1602,6 +1609,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 			break;
 		}//for switch(a)
 	}//for while
+	return FALSE;
 }
 
 
@@ -1668,6 +1676,7 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderGetVersion()
@@ -1729,6 +1738,7 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderMainStart()
@@ -1793,6 +1803,7 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 
@@ -1915,11 +1926,11 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		tickEnd = GetTickCount();
 		if(tickEnd < tickStart)
 		{
-			timeUsed = (0xFFFFFFFF + tickEnd-tickStart)/1000.0;
+			timeUsed = (float)((0xFFFFFFFF + tickEnd-tickStart)/1000.0);
 		}
 		else
 		{
-			timeUsed = (tickEnd-tickStart)/1000.0;
+			timeUsed =(float)((tickEnd-tickStart)/1000.0);
 		}
 		
 		if(ORDER_ERASE == orderList[j-4])
@@ -1974,4 +1985,24 @@ void CMFCApplication3Dlg::OnMenuSetting()
 {
 	CSettingDialog dlg;
 	dlg.DoModal();
+}
+
+
+int CMFCApplication3Dlg::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (CDialogEx::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// TODO:  在此添加您专用的创建代码
+	::SetProp(m_hWnd,AfxGetApp()->m_pszExeName,(HANDLE)1);
+	return 0;
+}
+
+
+void CMFCApplication3Dlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 在此处添加消息处理程序代码
+	::RemoveProp(m_hWnd,AfxGetApp()->m_pszExeName);
 }
