@@ -39,6 +39,28 @@ CMFCApplication3App theApp;
 
 BOOL CMFCApplication3App::InitInstance()
 {
+
+	HANDLE hSem = CreateSemaphore(NULL,1,1,m_pszExeName);
+	if (GetLastError()==ERROR_ALREADY_EXISTS)
+	{
+		CloseHandle(hSem);
+		HWND hWndPrevious = ::GetWindow(::GetDesktopWindow(),GW_CHILD);
+		while(::IsWindow(hWndPrevious))
+		{
+			if (::GetProp(hWndPrevious,m_pszExeName))
+			{
+				if (::IsIconic(hWndPrevious))
+					::ShowWindow(hWndPrevious,SW_RESTORE);
+				::SetForegroundWindow(hWndPrevious);
+				::SetForegroundWindow(::GetLastActivePopup(hWndPrevious));
+
+				return FALSE;
+			}
+			hWndPrevious = ::GetWindow(hWndPrevious,GW_HWNDNEXT);
+		}
+		return FALSE;
+	}
+
 	// 如果一个运行在 Windows XP 上的应用程序清单指定要
 	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
 	//则需要 InitCommonControlsEx()。否则，将无法创建窗口。

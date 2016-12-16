@@ -81,6 +81,8 @@ BEGIN_MESSAGE_MAP(CMFCApplication3Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_DEFAULTPASSWORD, &CMFCApplication3Dlg::OnBnClickedCheckDefaultpassword)
 	ON_COMMAND(ID_ABOUT, &CMFCApplication3Dlg::OnAbout)
 	ON_COMMAND(ID_Menu_Exit, &CMFCApplication3Dlg::OnMenuExit)
+	ON_WM_CREATE()
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -2068,3 +2070,23 @@ void CMFCApplication3Dlg::OnMenuExit()
 }
 
 
+
+
+int CMFCApplication3Dlg::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (CDialogEx::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// TODO:  在此添加您专用的创建代码
+	::SetProp(m_hWnd,AfxGetApp()->m_pszExeName,(HANDLE)1);
+	return 0;
+}
+
+
+void CMFCApplication3Dlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 在此处添加消息处理程序代码
+	::RemoveProp(m_hWnd,AfxGetApp()->m_pszExeName);
+}
