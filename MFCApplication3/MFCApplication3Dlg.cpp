@@ -1150,6 +1150,7 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderKey()
@@ -1225,6 +1226,7 @@ BOOL CMFCApplication3Dlg::OrderKey()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderErase()
@@ -1286,6 +1288,7 @@ BOOL CMFCApplication3Dlg::OrderErase()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderSPErase()
@@ -1347,6 +1350,7 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderProgram()
@@ -1461,6 +1465,7 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 			break;
 		}//for switch(a)
 	}//for while
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderProgData()
@@ -1567,6 +1572,7 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 			break;
 		}//for switch(a)
 	}//for while
+	return FALSE;
 }
 
 
@@ -1633,6 +1639,7 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderGetVersion()
@@ -1694,6 +1701,7 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 BOOL CMFCApplication3Dlg::OrderMainStart()
@@ -1758,6 +1766,7 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 		ShowInfo(_T("数据传输错误多次重试失败，请重新操作"));
 		return FALSE;
 	}
+	return FALSE;
 }
 
 
@@ -1880,11 +1889,11 @@ UINT CMFCApplication3Dlg::SendThread( void *param )
 		tickEnd = GetTickCount();
 		if(tickEnd < tickStart)
 		{
-			timeUsed = (0xFFFFFFFF + tickEnd-tickStart)/1000.0;
+			timeUsed = (float)((0xFFFFFFFF + tickEnd-tickStart)/1000.0);
 		}
 		else
 		{
-			timeUsed = (tickEnd-tickStart)/1000.0;
+			timeUsed = (float)((tickEnd-tickStart)/1000.0);
 		}
 		
 		if(ORDER_ERASE == orderList[j-4])
