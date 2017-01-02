@@ -480,7 +480,7 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 	int strLength = str.GetLength();
 	if (strLength!=8)
 	{
-		MessageBox(mess+_T("长度错误，请输入4字节地址，共计8位"),_T("警告"),MB_OK|MB_ICONWARNING);
+		MessageBox(mess+_T("长度错误，请输入8位密码"),_T("警告"),MB_OK|MB_ICONWARNING);
 		return FALSE;
 	}
 	UCHAR *addr = new UCHAR[strLength];
@@ -499,7 +499,7 @@ BOOL CMFCApplication3Dlg::CStringToUINT(const CString &str,UINT& d,CString mess)
 		{
 			addr[i] -= 0x57;
 		}else{
-			MessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符，以0x开头"),_T("警告"),MB_OK|MB_ICONWARNING);
+			MessageBox(mess+_T("格式错误，只支持\"0-9\",\"a-f\"以及\"A-F\"之间的字符"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 	}	
@@ -1153,12 +1153,12 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 			switch(receiceData->returnValue)
 			{
 				case PASSWORD_OK:
-					ShowInfo(_T("密码正确"));
+					ShowInfo(_T("密码校验正确"));
 					return TRUE;
 				break;
 				case PASSWORD_NOTOK:
-					//ShowErrMessageBox(_T("密码错误,请重新输入密码"));
-					MessageBox(_T("密码错误,请重新输入密码"),_T("警告"),MB_OK|MB_ICONWARNING);
+					//ShowErrMessageBox(_T("密码校验错误,请重新输入密码"));
+					MessageBox(_T("密码校验错误,请重新输入密码"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				break;
 				case DATA_ERR:
@@ -1174,9 +1174,9 @@ BOOL CMFCApplication3Dlg::OrderBoot()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1249,9 +1249,9 @@ BOOL CMFCApplication3Dlg::OrderKey()
 		}
 		else
 		{
-			//超时，提示并退出
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1311,9 +1311,9 @@ BOOL CMFCApplication3Dlg::OrderErase()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1373,9 +1373,9 @@ BOOL CMFCApplication3Dlg::OrderSPErase()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1474,9 +1474,9 @@ BOOL CMFCApplication3Dlg::OrderProgram()
 				}
 				else
 				{
-					//超时，提示并退出			
-					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+					//超时提示			
+					ShowInfo(_T("下位机响应超时，请重试"));
+					//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1581,9 +1581,9 @@ BOOL CMFCApplication3Dlg::OrderProgData()
 				}
 				else
 				{
-					//超时，提示并退出			
-					//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-					MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+					//超时提示			
+					ShowInfo(_T("下位机响应超时，请重试"));
+					//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 					return FALSE;
 				}
 
@@ -1638,11 +1638,15 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 			{
 				case BOOTEND_OK:
 					//在6中显示数据传输错误次数：x(data中第一字节)，flash写入失败次数，y(data中第二字节)
-					strListInfo.Format(_T("数据传输错误次数:%d次\n flash写入失败的次数:%d次"),receiceData->allData[3],receiceData->allData[4]);
-					
-					//tmp1.Format(_T(" flash写入失败的次数:%d次"),receiceData->allData[4]);
-					//tmp+= tmp1;
-					ShowInfo(strListInfo);
+					if(0 == receiceData->allData[3] && 0 == receiceData->allData[4])
+					{
+						ShowInfo(_T("烧写过程未出现错误"));
+					}
+					else
+					{
+						strListInfo.Format(_T("数据传输错误次数:%d次\n flash写入失败的次数:%d次"),receiceData->allData[3],receiceData->allData[4]);
+						ShowInfo(strListInfo);
+					}
 					return TRUE;
 				break;
 				case BOOTEND_NOTOK:
@@ -1662,9 +1666,9 @@ BOOL CMFCApplication3Dlg::OrderBootEnd()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1724,9 +1728,9 @@ BOOL CMFCApplication3Dlg::OrderGetVersion()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
@@ -1789,9 +1793,9 @@ BOOL CMFCApplication3Dlg::OrderMainStart()
 		}
 		else
 		{
-			//超时，提示并退出			
-			//ShowErrMessageBox(_T("下位机响应超时，停止烧写"));
-			MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
+			//超时提示			
+			ShowInfo(_T("下位机响应超时，请重试"));
+			//MessageBox(_T("下位机响应超时，请重试"),_T("警告"),MB_OK|MB_ICONWARNING);
 			return FALSE;
 		}
 
