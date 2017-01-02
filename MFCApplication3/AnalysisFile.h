@@ -93,7 +93,7 @@ public:
 	//使用前必须调用此函数
 	//使用前检查文件
 	int CheckSrecFile();
-	BOOL SetArrange(BOOL sendAllData,UINT leftSide = 0, UINT rightSide = 0);//sendAllData为FALSE：只写数据，设置数据范围
+	BOOL SetArrange(UINT leftSide = 0, UINT rightSide = 0);//sendAllData为FALSE：只写数据，设置数据范围
 	int ReadNextLine();//读取数据
 
 	const UCHAR *GetDataSend();
