@@ -53,11 +53,12 @@ CAnalysisFile::~CAnalysisFile(void)
 }
 
 
-BOOL CAnalysisFile::SetArrange(BOOL sendAllData,UINT leftSide, UINT rightSide)//sendAllData为FALSE：只写数据，设置数据范围
+BOOL CAnalysisFile::SetArrange(UINT leftSide, UINT rightSide)//sendAllData为FALSE：只写数据，设置数据范围
 {
-	this->sendAllData = sendAllData;
+	//this->sendAllData = sendAllData;
 
-	if (this->sendAllData == FALSE && leftSide>rightSide)
+	//if (this->sendAllData == FALSE && leftSide>rightSide)
+	if (leftSide>rightSide)
 	{
 		//左边不能比右边大
 		return FALSE;
@@ -138,7 +139,7 @@ int CAnalysisFile::ReadNextLine()
 		return ReadNextLine();
 	}
 
-	if (!sendAllData)
+	//if (!sendAllData)
 	{
 		//判断数据是否在范围内
 		int a = IsDataInside();
@@ -173,12 +174,13 @@ int CAnalysisFile::ReadNextLine()
 		}
 		sendedLength +=sendLength;
 	}
+	/*
 	else
 	{
 		sendLength = dataLength;
 		sendStartPosition = 3+addrLength;
 		sendStartAddr = lineStartAddr;
-	}
+	}*/
 
 	GenerateSendData();
 	return FILE_READ_NORMAL;
