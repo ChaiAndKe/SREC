@@ -454,7 +454,7 @@ void CMFCApplication3Dlg::OnBnClickedButtonStartbootloader()
 		
 		//设置边界
 		try{
-			if (!fileToWrite->SetArrange(FALSE,startAddress,stopAddress))
+			if (!fileToWrite->SetArrange(startAddress,stopAddress))
 			{
 				//MessageBox(_T("地址设置错误，请重试！"),_T("警告"),MB_OK|MB_ICONWARNING);
 				ShowInfo(_T("文件地址设置错误，请重新配置！"));
@@ -954,6 +954,7 @@ BOOL CMFCApplication3Dlg::ReceiveOrderInMs(UINT timeOut)
 			}
 			else if((frameinfo[i].ID == MSGID_FRAMEREV) && (frameinfo[i].DataLen == 8))//接收正确的帧ID
 			{
+				receiceData->totalLength = 8;
 				receiceData->SetAllData((const char *)(frameinfo[i].Data), 8);
 				if((receiceData->Calculate_Check() == frameinfo[i].Data[7]) && (receiceData->allData[0] == 0xA5))
 				{
